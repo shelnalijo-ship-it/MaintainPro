@@ -1,0 +1,15 @@
+D:\MaintainPro\backend\MaintainPro.Application\bin\Debug\net10.0\MaintainPro.Application.deps.json
+D:\MaintainPro\backend\MaintainPro.Application\bin\Debug\net10.0\MaintainPro.Application.dll
+D:\MaintainPro\backend\MaintainPro.Application\bin\Debug\net10.0\MaintainPro.Application.pdb
+D:\MaintainPro\backend\MaintainPro.Application\bin\Debug\net10.0\MaintainPro.Domain.dll
+D:\MaintainPro\backend\MaintainPro.Application\bin\Debug\net10.0\MaintainPro.Domain.pdb
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.csproj.AssemblyReference.cache
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.GeneratedMSBuildEditorConfig.editorconfig
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.AssemblyInfoInputs.cache
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.AssemblyInfo.cs
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.csproj.CoreCompileInputs.cache
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\Maintain.90EB1BC6.Up2Date
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.dll
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\refint\MaintainPro.Application.dll
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\MaintainPro.Application.pdb
+D:\MaintainPro\backend\MaintainPro.Application\obj\Debug\net10.0\ref\MaintainPro.Application.dll

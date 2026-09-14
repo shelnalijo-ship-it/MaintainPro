@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="MaintainPro.Api/MaintainPro.Api.csproj" />
+  <Project Path="MaintainPro.Application/MaintainPro.Application.csproj" />
+  <Project Path="MaintainPro.Domain/MaintainPro.Domain.csproj" />
+  <Project Path="MaintainPro.Infrastructure/MaintainPro.Infrastructure.csproj" />
+  <Project Path="MaintainPro.Tests/MaintainPro.Tests.csproj" />
+</Solution>

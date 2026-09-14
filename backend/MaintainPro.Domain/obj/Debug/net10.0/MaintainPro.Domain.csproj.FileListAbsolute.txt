@@ -1,0 +1,11 @@
+D:\MaintainPro\backend\MaintainPro.Domain\bin\Debug\net10.0\MaintainPro.Domain.deps.json
+D:\MaintainPro\backend\MaintainPro.Domain\bin\Debug\net10.0\MaintainPro.Domain.dll
+D:\MaintainPro\backend\MaintainPro.Domain\bin\Debug\net10.0\MaintainPro.Domain.pdb
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\MaintainPro.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\MaintainPro.Domain.AssemblyInfoInputs.cache
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\MaintainPro.Domain.AssemblyInfo.cs
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\MaintainPro.Domain.csproj.CoreCompileInputs.cache
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\MaintainPro.Domain.dll
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\refint\MaintainPro.Domain.dll
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\MaintainPro.Domain.pdb
+D:\MaintainPro\backend\MaintainPro.Domain\obj\Debug\net10.0\ref\MaintainPro.Domain.dll
