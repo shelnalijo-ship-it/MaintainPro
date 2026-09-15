@@ -111,8 +111,15 @@ public sealed class CalibrationService(IApplicationDbContext db, ICurrentUser cu
         return ToDto(cert, cert.Machine, await ActiveRenewalAsync(cert.MachineId, ct));
     }
 
-    public Task<PagedResult<CalibrationCertificateDto>> MachineHistoryAsync(Guid machineId, CalibrationQuery request, CancellationToken ct = default) =>
-        ListAsync(request with { MachineId = machineId }, ct);
+    public async Task<PagedResult<CalibrationCertificateDto>> MachineHistoryAsync(Guid machineId,
+        CalibrationQuery request, CancellationToken ct = default)
+    {
+        if (!await CalibrationAccess.VisibleMachines(db, currentUser).AsNoTracking()
+                .AnyAsync(x => x.Id == machineId, ct))
+            throw new AppException(404, "Machine not found.");
+
+        return await ListAsync(request with { MachineId = machineId }, ct);
+    }
 
     public async Task<MachineCalibrationStatusDto> MachineStatusAsync(Guid machineId, CancellationToken ct = default)
     {

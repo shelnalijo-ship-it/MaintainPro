@@ -49,7 +49,8 @@ public class ApplicationDbContextTests
             nameof(BreakdownAssignmentHistory), nameof(BreakdownHistoryEvent), nameof(BreakdownNotificationEvent),
             nameof(CorrectiveActionDraft), nameof(CorrectivePartUsage), nameof(BreakdownAttachment),
             nameof(CorrectiveSubmission), nameof(CorrectiveSubmissionPartUsage), nameof(CorrectiveSubmissionAttachment),
-            nameof(CorrectiveApproval)
+            nameof(CorrectiveApproval), nameof(CalibrationCertificate), nameof(CalibrationRenewal),
+            nameof(CalibrationNotificationEvent)
         }.Order(StringComparer.Ordinal),
             entities.Select(entity => entity.ClrType.Name).Order(StringComparer.Ordinal));
 
@@ -173,7 +174,17 @@ public class ApplicationDbContextTests
             "CorrectiveSubmissionAttachment.UploadedByUser: UploadedByUserId -> User; required=True",
             "CorrectiveApproval.Breakdown: BreakdownId -> Breakdown; required=True",
             "CorrectiveApproval.Submission: CorrectiveSubmissionId -> CorrectiveSubmission; required=True",
-            "CorrectiveApproval.Supervisor: SupervisorId -> User; required=True"
+            "CorrectiveApproval.Supervisor: SupervisorId -> User; required=True",
+            "CalibrationCertificate.Machine: MachineId -> Machine; required=True",
+            "CalibrationCertificate.CertificateFile: CertificateFileId -> FileRecord; required=False",
+            "CalibrationCertificate.CreatedByUser: CreatedByUserId -> User; required=True",
+            "CalibrationRenewal.Machine: MachineId -> Machine; required=True",
+            "CalibrationRenewal.PreviousCertificate: PreviousCertificateId -> CalibrationCertificate; required=False",
+            "CalibrationRenewal.CompletedCertificate: CompletedCertificateId -> CalibrationCertificate; required=False",
+            "CalibrationRenewal.StartedByUser: StartedByUserId -> User; required=True",
+            "CalibrationNotificationEvent.Machine: MachineId -> Machine; required=True",
+            "CalibrationNotificationEvent.Certificate: CalibrationCertificateId -> CalibrationCertificate; required=False",
+            "CalibrationNotificationEvent.Renewal: CalibrationRenewalId -> CalibrationRenewal; required=False"
         }.Order(StringComparer.Ordinal), relationships);
     }
 
@@ -219,7 +230,9 @@ public class ApplicationDbContextTests
             "BreakdownAssignmentHistory.BreakdownId,SequenceNumber", "BreakdownHistoryEvent.BreakdownId,SequenceNumber",
             "BreakdownNotificationEvent.DeduplicationKey", "CorrectiveActionDraft.BreakdownId",
             "BreakdownAttachment.BreakdownId,FileId", "CorrectiveSubmission.BreakdownId,VersionNumber",
-            "CorrectiveSubmissionAttachment.CorrectiveSubmissionId,FileId", "CorrectiveApproval.CorrectiveSubmissionId"
+            "CorrectiveSubmissionAttachment.CorrectiveSubmissionId,FileId", "CorrectiveApproval.CorrectiveSubmissionId",
+            "CalibrationCertificate.CalibrationProvider,CertificateNumber", "CalibrationRenewal.MachineId",
+            "CalibrationNotificationEvent.DeduplicationKey"
         }.Order(StringComparer.Ordinal), uniqueIndexes);
     }
 
@@ -325,12 +338,12 @@ public class ApplicationDbContextTests
         var enumProperties = properties
             .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum).ToArray();
 
-        Assert.Equal(76, timestampProperties.Length);
+        Assert.Equal(84, timestampProperties.Length);
         Assert.All(timestampProperties,
             property => Assert.Equal("timestamp with time zone", property.GetColumnType()));
-        Assert.Equal(7, dateProperties.Length);
+        Assert.Equal(9, dateProperties.Length);
         Assert.All(dateProperties, property => Assert.Equal("date", property.GetColumnType()));
-        Assert.Equal(30, enumProperties.Length);
+        Assert.Equal(34, enumProperties.Length);
         Assert.All(enumProperties,
             property => Assert.Equal(typeof(string), property.GetTypeMapping().Converter!.ProviderClrType));
     }

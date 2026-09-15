@@ -14,6 +14,7 @@ public sealed class CalibrationRenewalConfiguration : IEntityTypeConfiguration<C
         b.Property(x => x.CompletedAt).HasColumnType("timestamp with time zone");
         b.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
         b.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
+        b.Property(x => x.Notes).HasMaxLength(10000);
         b.Property(x => x.Version).IsConcurrencyToken();
         b.HasIndex(x => x.MachineId).HasFilter("\"Status\" = 'IN_PROGRESS'").IsUnique();
         b.HasIndex(x => new { x.MachineId, x.StartedAt });

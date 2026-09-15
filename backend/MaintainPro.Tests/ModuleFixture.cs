@@ -12,6 +12,7 @@ using MaintainPro.Application.Execution;
 using MaintainPro.Application.Reviews;
 using MaintainPro.Application.Notifications;
 using MaintainPro.Application.Breakdowns;
+using MaintainPro.Application.Calibrations;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
@@ -45,7 +46,7 @@ internal sealed class ModuleFixture : IAsyncDisposable
         Audit = new AuditWriter(db, Actor, Clock);
         Auth = new AuthService(db, Passwords, Tokens, Actor, Audit, Clock);
         Users = new UserService(db, Passwords, Actor, Audit, Clock);
-        Machines = new MachineService(db, Actor, Audit);
+        Machines = new MachineService(db, Actor, Audit, Clock);
         Masters = new MasterDataService(db, Actor, Audit);
         Recurrence = new RecurrenceService();
         MaintenanceTypes = new MaintenanceTypeService(db, Actor, Audit, Clock);
@@ -74,6 +75,10 @@ internal sealed class ModuleFixture : IAsyncDisposable
         BreakdownNotifications = new BreakdownNotificationProcessor(db, Actor, Audit, Clock,
             new SqliteGenerationConcurrency(db));
         Breakdowns = new BreakdownService(db, Actor, Audit, Clock, new SqliteGenerationConcurrency(db));
+        Calibrations = new CalibrationService(db, Actor, Audit, Clock, FileStorage);
+        CalibrationRenewals = new CalibrationRenewalService(db, Actor, Audit, Clock);
+        CalibrationReminders = new CalibrationReminderProcessor(db, Actor, Audit, Clock,
+            new SqliteGenerationConcurrency(db));
     }
 
     public ApplicationDbContext Db { get; }
@@ -118,6 +123,9 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public BreakdownEvidenceService BreakdownEvidence { get; }
     public BreakdownNotificationProcessor BreakdownNotifications { get; }
     public BreakdownService Breakdowns { get; }
+    public CalibrationService Calibrations { get; }
+    public CalibrationRenewalService CalibrationRenewals { get; }
+    public CalibrationReminderProcessor CalibrationReminders { get; }
 
     public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {

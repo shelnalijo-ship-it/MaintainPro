@@ -10,7 +10,10 @@ public sealed class CalibrationNotificationEventConfiguration : IEntityTypeConfi
     {
         b.ToTable("CalibrationNotificationEvents"); b.HasKey(x => x.Id);
         b.Property(x => x.NotificationType).HasConversion<string>(); b.Property(x => x.Priority).HasConversion<string>();
-        b.Property(x => x.DeduplicationKey).HasMaxLength(500).IsRequired(); b.Property(x => x.Title).IsRequired(); b.Property(x => x.Message).IsRequired();
+        b.Property(x => x.DeduplicationKey).HasMaxLength(500).IsRequired();
+        b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Message).HasMaxLength(10000).IsRequired();
+        b.Property(x => x.LastError).HasMaxLength(2000);
         b.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone"); b.Property(x => x.ProcessedAt).HasColumnType("timestamp with time zone");
         b.Property(x => x.Version).IsConcurrencyToken();
         b.HasIndex(x => x.DeduplicationKey).IsUnique(); b.HasIndex(x => new { x.ProcessedAt, x.MachineId });

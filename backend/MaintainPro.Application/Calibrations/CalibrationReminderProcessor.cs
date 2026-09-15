@@ -44,13 +44,17 @@ public sealed class CalibrationReminderProcessor(IApplicationDbContext db, ICurr
                     }
                     else result = result.Add(await notifier.EnsureAsync(machine, NotificationType.CALIBRATION_EXPIRED, ct: ct));
                     result = result.Add(await notifier.ReplayAsync(machine, ct));
-                    if (state.ValidityStatus == CalibrationValidityStatus.EXPIRED) expired++;
-                    created += result.NotificationsCreated; duplicates += result.DuplicatesSkipped;
-                    errors += result.Errors; issues.AddRange(result.Issues);
                     if (result.NotificationsCreated > 0)
                         audit.Record("Calibration.RemindersProcessed", nameof(Domain.Entities.Machine), id,
                             newValues: new { result.NotificationsCreated, state.ValidityStatus, state.DaysRemaining });
-                    await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); handled = true;
+                    await db.SaveChangesAsync(ct);
+                    await transaction.CommitAsync(ct);
+                    if (state.ValidityStatus == CalibrationValidityStatus.EXPIRED) expired++;
+                    created += result.NotificationsCreated;
+                    duplicates += result.DuplicatesSkipped;
+                    errors += result.Errors;
+                    issues.AddRange(result.Issues);
+                    handled = true;
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                 catch (Exception ex) when (attempt < 4 && concurrency.IsRetryable(ex))

@@ -9,7 +9,9 @@ public sealed class CalibrationCertificateConfiguration : IEntityTypeConfigurati
     public void Configure(EntityTypeBuilder<CalibrationCertificate> b)
     {
         b.ToTable("CalibrationCertificates"); b.HasKey(x => x.Id);
-        b.Property(x => x.CertificateNumber).IsRequired(); b.Property(x => x.CalibrationProvider).IsRequired();
+        b.Property(x => x.CertificateNumber).HasMaxLength(200).IsRequired();
+        b.Property(x => x.CalibrationProvider).HasMaxLength(300).IsRequired();
+        b.Property(x => x.Remarks).HasMaxLength(10000);
         b.Property(x => x.CalibrationDate).HasColumnType("date"); b.Property(x => x.ExpiryDate).HasColumnType("date");
         b.Property(x => x.Result).HasConversion<string>();
         b.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
