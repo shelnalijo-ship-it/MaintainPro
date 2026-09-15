@@ -12,6 +12,9 @@ public static class Policies
     public const string ManageMachines = nameof(ManageMachines);
     public const string ViewAllMachines = nameof(ViewAllMachines);
     public const string ReadMachines = nameof(ReadMachines);
+    public const string ManagePlanning = nameof(ManagePlanning);
+    public const string ReadPlanning = nameof(ReadPlanning);
+    public const string ReadWorkOrders = nameof(ReadWorkOrders);
 
     public static void AddPolicies(IServiceCollection services)
     {
@@ -27,6 +30,9 @@ public static class Policies
             options.AddPolicy(ManageMachines, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
             options.AddPolicy(ViewAllMachines, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
             options.AddPolicy(ReadMachines, policy => policy.RequireRole(RoleNames.All.ToArray()));
+            options.AddPolicy(ManagePlanning, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ReadPlanning, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin, RoleNames.Supervisor));
+            options.AddPolicy(ReadWorkOrders, policy => policy.RequireRole(RoleNames.All.ToArray()));
         });
     }
 }

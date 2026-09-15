@@ -5,6 +5,7 @@ using MaintainPro.Api.Endpoints;
 using MaintainPro.Api.Health;
 using MaintainPro.Api.Middleware;
 using MaintainPro.Api.Security;
+using MaintainPro.Api.Scheduling;
 using MaintainPro.Application.Abstractions;
 using MaintainPro.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -38,6 +39,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddHostedService<IdentityInitializationService>();
+builder.Services.Configure<MaintenanceGenerationOptions>(builder.Configuration.GetSection(MaintenanceGenerationOptions.SectionName));
+builder.Services.AddHostedService<MaintenanceGenerationService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
@@ -87,6 +90,8 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapMasterDataEndpoints();
 app.MapMachineEndpoints();
+app.MapPlanningEndpoints();
+app.MapWorkOrderEndpoints();
 
 app.Run();
 

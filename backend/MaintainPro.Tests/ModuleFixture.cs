@@ -6,9 +6,12 @@ using MaintainPro.Application.Identity;
 using MaintainPro.Application.Machines;
 using MaintainPro.Application.MasterData;
 using MaintainPro.Application.Users;
+using MaintainPro.Application.Planning;
+using MaintainPro.Application.WorkOrders;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
+using MaintainPro.Infrastructure.Planning;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +40,13 @@ internal sealed class ModuleFixture : IAsyncDisposable
         Users = new UserService(db, Passwords, Actor, Audit, Clock);
         Machines = new MachineService(db, Actor, Audit);
         Masters = new MasterDataService(db, Actor, Audit);
+        Recurrence = new RecurrenceService();
+        MaintenanceTypes = new MaintenanceTypeService(db, Actor, Audit, Clock);
+        Plans = new MaintenancePlanService(db, Actor, Audit, Clock, Recurrence);
+        Numbers = new WorkOrderNumberAllocator(db);
+        Generation = new WorkOrderGenerationService(db, Actor, Audit, Recurrence, Clock, Numbers,
+            new SqliteGenerationConcurrency(db));
+        WorkOrders = new WorkOrderService(db, Actor, Clock);
     }
 
     public ApplicationDbContext Db { get; }
@@ -56,10 +66,20 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public UserService Users { get; }
     public MachineService Machines { get; }
     public MasterDataService Masters { get; }
+    public RecurrenceService Recurrence { get; }
+    public MaintenanceTypeService MaintenanceTypes { get; }
+    public MaintenancePlanService Plans { get; }
+    public WorkOrderNumberAllocator Numbers { get; }
+    public WorkOrderGenerationService Generation { get; }
+    public WorkOrderService WorkOrders { get; }
 
-    public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true)
+    public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {
-        var connection = new SqliteConnection("Data Source=:memory:;Foreign Keys=True");
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = sqliteDatabasePath ?? ":memory:", ForeignKeys = true,
+            Pooling = false, DefaultTimeout = 5
+        }.ToString());
         await connection.OpenAsync();
         var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options;
         var db = new ApplicationDbContext(options);
@@ -161,4 +181,18 @@ internal sealed class AdjustableTimeProvider : TimeProvider
     private DateTimeOffset now = DateTimeOffset.UtcNow;
     public override DateTimeOffset GetUtcNow() => now;
     public void Advance(TimeSpan duration) => now = now.Add(duration);
+    public void SetUtc(DateTimeOffset value) => now = value.ToUniversalTime();
+}
+
+internal sealed class SqliteGenerationConcurrency(ApplicationDbContext db) : IGenerationConcurrency
+{
+    private readonly GenerationConcurrency production = new(db);
+    public void ResetTracking() => production.ResetTracking();
+    public bool IsRetryable(Exception exception)
+    {
+        if (production.IsRetryable(exception)) return true;
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+            if (current is SqliteException { SqliteErrorCode: 5 or 6 or 19 }) return true;
+        return false;
+    }
 }

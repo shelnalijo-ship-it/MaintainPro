@@ -17,7 +17,7 @@ public class ApplicationDbContextTests
         "Host=127.0.0.1;Port=1;Database=maintainpro_model_tests;Username=model_test";
 
     [Fact]
-    public void Model_contains_only_the_ten_module_entities_without_shadow_properties()
+    public void Model_contains_only_the_eighteen_module_entities_without_shadow_properties()
     {
         using var context = CreateContext();
         var entities = context.Model.GetEntityTypes().ToArray();
@@ -25,7 +25,9 @@ public class ApplicationDbContextTests
         Assert.Equal(new[]
         {
             nameof(AuditLog), nameof(Department), nameof(Location), nameof(Machine), nameof(MachineAssignmentHistory),
-            nameof(MachineCategory), nameof(RefreshToken), nameof(Role), nameof(User), nameof(UserRole)
+            nameof(MachineCategory), nameof(RefreshToken), nameof(Role), nameof(User), nameof(UserRole),
+            nameof(MaintenanceType), nameof(MaintenancePlan), nameof(ChecklistTemplate), nameof(ChecklistItem),
+            nameof(WorkOrder), nameof(WorkOrderDefinition), nameof(WorkOrderChecklistItem), nameof(WorkOrderNumberSequence)
         }.Order(StringComparer.Ordinal),
             entities.Select(entity => entity.ClrType.Name).Order(StringComparer.Ordinal));
 
@@ -64,7 +66,23 @@ public class ApplicationDbContextTests
             "MachineAssignmentHistory.AssignedByUser: AssignedByUserId -> User; required=True",
             "AuditLog.User: UserId -> User; required=False",
             "RefreshToken.User: UserId -> User; required=True",
-            "RefreshToken.ReplacedByToken: ReplacedByTokenId -> RefreshToken; required=False"
+            "RefreshToken.ReplacedByToken: ReplacedByTokenId -> RefreshToken; required=False",
+            "MaintenancePlan.Machine: MachineId -> Machine; required=True",
+            "MaintenancePlan.MaintenanceType: MaintenanceTypeId -> MaintenanceType; required=True",
+            "MaintenancePlan.DefaultTechnician: DefaultTechnicianId -> User; required=False",
+            "MaintenancePlan.Supervisor: SupervisorId -> User; required=True",
+            "MaintenancePlan.CreatedByUser: CreatedByUserId -> User; required=True",
+            "ChecklistTemplate.MaintenancePlan: MaintenancePlanId -> MaintenancePlan; required=True",
+            "ChecklistTemplate.CreatedByUser: CreatedByUserId -> User; required=True",
+            "ChecklistItem.ChecklistTemplate: ChecklistTemplateId -> ChecklistTemplate; required=True",
+            "WorkOrder.Machine: MachineId -> Machine; required=True",
+            "WorkOrder.MaintenancePlan: MaintenancePlanId -> MaintenancePlan; required=False",
+            "WorkOrder.AssignedTechnician: AssignedTechnicianId -> User; required=False",
+            "WorkOrder.Supervisor: SupervisorId -> User; required=True",
+            "WorkOrderDefinition.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderDefinition.MaintenanceType: MaintenanceTypeId -> MaintenanceType; required=True",
+            "WorkOrderDefinition.ChecklistTemplate: ChecklistTemplateId -> ChecklistTemplate; required=True",
+            "WorkOrderChecklistItem.Definition: WorkOrderDefinitionId -> WorkOrderDefinition; required=True"
         }.Order(StringComparer.Ordinal), relationships);
     }
 
@@ -95,7 +113,10 @@ public class ApplicationDbContextTests
         {
             "Role.Name", "User.EmployeeId", "User.Email", "Department.Name",
             "MachineCategory.Name", "Machine.MachineCode", "RefreshToken.TokenHash",
-            "MachineAssignmentHistory.MachineId"
+            "MachineAssignmentHistory.MachineId", "MaintenanceType.Name",
+            "ChecklistTemplate.MaintenancePlanId,Version", "ChecklistItem.ChecklistTemplateId,SequenceNumber",
+            "WorkOrder.WorkOrderNumber", "WorkOrder.MaintenancePlanId,PlannedDate",
+            "WorkOrderDefinition.WorkOrderId", "WorkOrderChecklistItem.WorkOrderDefinitionId,SequenceNumber"
         }.Order(StringComparer.Ordinal), uniqueIndexes);
     }
 
@@ -122,11 +143,27 @@ public class ApplicationDbContextTests
     {
         using var context = CreateContext();
 
-        foreach (var type in new[] { typeof(User), typeof(Machine), typeof(RefreshToken) })
+        foreach (var type in new[] { typeof(User), typeof(Machine), typeof(RefreshToken),
+            typeof(MaintenanceType), typeof(MaintenancePlan), typeof(WorkOrder), typeof(WorkOrderNumberSequence) })
         {
             var entity = context.Model.FindEntityType(type)!;
             Assert.Contains(entity.GetProperties(), property => property.IsConcurrencyToken);
         }
+    }
+
+    [Fact]
+    public void Persistent_occurrence_and_year_counter_keys_prevent_duplicate_generation()
+    {
+        using var context = CreateContext();
+        var workOrder = context.Model.FindEntityType(typeof(WorkOrder))!;
+        var occurrence = Assert.Single(workOrder.GetIndexes(), index => index.IsUnique &&
+            index.Properties.Select(property => property.Name).SequenceEqual(new[] { "MaintenancePlanId", "PlannedDate" }));
+        Assert.Equal("\"MaintenancePlanId\" IS NOT NULL", occurrence.GetFilter());
+        var counter = context.Model.FindEntityType(typeof(WorkOrderNumberSequence))!;
+        Assert.Equal(new[] { "Year" }, counter.FindPrimaryKey()!.Properties.Select(property => property.Name));
+        Assert.Equal(typeof(long), counter.FindProperty("LastValue")!.ClrType);
+        Assert.DoesNotContain("OVERDUE", Enum.GetNames<WorkOrderLifecycleStatus>());
+        Assert.DoesNotContain("ESCALATED", Enum.GetNames<WorkOrderLifecycleStatus>());
     }
 
     [Fact]
@@ -180,17 +217,16 @@ public class ApplicationDbContextTests
             .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType)
                 == typeof(DateTime)).ToArray();
         var dateProperties = properties
-            .Where(property => property.ClrType == typeof(DateOnly?)).ToArray();
+            .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType) == typeof(DateOnly)).ToArray();
         var enumProperties = properties
-            .Where(property => property.ClrType == typeof(MachineStatus)
-                || property.ClrType == typeof(MachineCriticality)).ToArray();
+            .Where(property => property.ClrType.IsEnum).ToArray();
 
-        Assert.Equal(11, timestampProperties.Length);
+        Assert.Equal(23, timestampProperties.Length);
         Assert.All(timestampProperties,
             property => Assert.Equal("timestamp with time zone", property.GetColumnType()));
-        Assert.Equal(3, dateProperties.Length);
+        Assert.Equal(7, dateProperties.Length);
         Assert.All(dateProperties, property => Assert.Equal("date", property.GetColumnType()));
-        Assert.Equal(2, enumProperties.Length);
+        Assert.Equal(9, enumProperties.Length);
         Assert.All(enumProperties,
             property => Assert.Equal(typeof(string), property.GetTypeMapping().Converter!.ProviderClrType));
     }

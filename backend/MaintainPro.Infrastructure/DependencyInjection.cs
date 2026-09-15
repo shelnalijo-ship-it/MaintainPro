@@ -6,6 +6,9 @@ using MaintainPro.Application.Identity;
 using MaintainPro.Application.Users;
 using MaintainPro.Application.Machines;
 using MaintainPro.Application.MasterData;
+using MaintainPro.Application.Planning;
+using MaintainPro.Application.WorkOrders;
+using MaintainPro.Infrastructure.Planning;
 using MaintainPro.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +46,13 @@ public static class DependencyInjection
         services.AddScoped<MachineService>();
         services.AddScoped<MasterDataService>();
         services.AddScoped<IdentityInitializer>();
+        services.AddSingleton<RecurrenceService>();
+        services.AddScoped<MaintenanceTypeService>();
+        services.AddScoped<MaintenancePlanService>();
+        services.AddScoped<WorkOrderService>();
+        services.AddScoped<WorkOrderNumberAllocator>();
+        services.AddScoped<IGenerationConcurrency, GenerationConcurrency>();
+        services.AddScoped<WorkOrderGenerationService>();
 
         return services;
     }

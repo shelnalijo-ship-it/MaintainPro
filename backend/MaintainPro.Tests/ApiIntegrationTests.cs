@@ -10,6 +10,8 @@ using MaintainPro.Application.Abstractions;
 using MaintainPro.Application.Identity;
 using MaintainPro.Application.Machines;
 using MaintainPro.Application.Users;
+using MaintainPro.Application.Planning;
+using MaintainPro.Application.WorkOrders;
 using MaintainPro.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -66,7 +68,7 @@ public sealed class ApiIntegrationTests
         using var client = factory.CreateClient();
         await SignInAsync(client, administrator.Email, fixture.Password);
 
-        foreach (var path in new[] { "/api/v1/machines", "/api/v1/users" })
+        foreach (var path in new[] { "/api/v1/machines", "/api/v1/users", "/api/v1/maintenance-plans", "/api/v1/work-orders" })
         {
             var response = await client.GetAsync(path);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -83,6 +85,8 @@ public sealed class ApiIntegrationTests
     [InlineData("PATCH", "/api/v1/locations/{id}/status")]
     [InlineData("PATCH", "/api/v1/machine-categories/{id}/status")]
     [InlineData("PATCH", "/api/v1/users/{id}/status")]
+    [InlineData("PATCH", "/api/v1/maintenance-plans/{id}/status")]
+    [InlineData("PATCH", "/api/v1/maintenance-types/{id}/status")]
     [InlineData("POST", "/api/v1/machines/{id}/assign-owner")]
     public async Task Required_mutation_values_cannot_be_silently_defaulted_from_an_empty_body(string method, string path)
     {
@@ -97,6 +101,47 @@ public sealed class ApiIntegrationTests
         };
 
         await AssertProblemAsync(await client.SendAsync(request), HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Planning_checklist_and_generation_API_expose_versioned_historical_jobs_with_scoped_access()
+    {
+        await using var fixture = await ModuleFixture.CreateAsync();
+        var data = await PlanningTestData.CreateAsync(fixture);
+        using var factory = new IsolatedApiFactory(fixture);
+        using var client = factory.CreateClient();
+        await SignInAsync(client, data.Administrator.Email, fixture.Password);
+        var createdResponse = await client.PostAsJsonAsync("/api/v1/maintenance-plans", data.Request, ApiJson);
+        Assert.Equal(HttpStatusCode.Created, createdResponse.StatusCode);
+        var plan = (await createdResponse.Content.ReadFromJsonAsync<MaintenancePlanDto>(ApiJson))!;
+        var checklistResponse = await client.PutAsJsonAsync($"/api/v1/maintenance-plans/{plan.Id}/checklist",
+            PlanningTestData.Checklist(), ApiJson);
+        Assert.Equal(HttpStatusCode.OK, checklistResponse.StatusCode);
+        Assert.Equal(1, (await checklistResponse.Content.ReadFromJsonAsync<ChecklistTemplateDto>(ApiJson))!.Version);
+        var generated = await client.PostAsJsonAsync("/api/v1/maintenance-plans/generate-due", new GenerationRequest(), ApiJson);
+        Assert.Equal(HttpStatusCode.OK, generated.StatusCode);
+        Assert.Equal(1, (await generated.Content.ReadFromJsonAsync<GenerationSummary>(ApiJson))!.WorkOrdersCreated);
+        var repeated = await client.PostAsJsonAsync("/api/v1/maintenance-plans/generate-due", new GenerationRequest(), ApiJson);
+        Assert.Equal(0, (await repeated.Content.ReadFromJsonAsync<GenerationSummary>(ApiJson))!.WorkOrdersCreated);
+        var revision = await client.PutAsJsonAsync($"/api/v1/maintenance-plans/{plan.Id}/checklist",
+            PlanningTestData.Checklist("New checklist"), ApiJson);
+        Assert.Equal(2, (await revision.Content.ReadFromJsonAsync<ChecklistTemplateDto>(ApiJson))!.Version);
+        Assert.Equal(1, (await client.GetFromJsonAsync<ChecklistTemplateDto>(
+            $"/api/v1/maintenance-plans/{plan.Id}/checklist?version=1", ApiJson))!.Version);
+        await AssertProblemAsync(await client.GetAsync("/api/v1/work-orders/calendar"), HttpStatusCode.BadRequest);
+        var calendar = await client.GetFromJsonAsync<WorkOrderCalendarEventDto[]>(
+            $"/api/v1/work-orders/calendar?from={plan.StartDate:yyyy-MM-dd}&to={plan.StartDate:yyyy-MM-dd}", ApiJson);
+        var orderId = Assert.Single(calendar!).Id;
+        var order = (await client.GetFromJsonAsync<WorkOrderDto>($"/api/v1/work-orders/{orderId}", ApiJson))!;
+        Assert.Equal(1, order.Definition.ChecklistVersion);
+
+        await SignInAsync(client, data.Technician.Email, fixture.Password);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/work-orders/{orderId}")).StatusCode);
+        await AssertProblemAsync(await client.PostAsJsonAsync("/api/v1/maintenance-plans/generate-due", new GenerationRequest()),
+            HttpStatusCode.Forbidden);
+        var unrelated = await fixture.SeedUserAsync("TECHNICIAN");
+        await SignInAsync(client, unrelated.Email, fixture.Password);
+        await AssertProblemAsync(await client.GetAsync($"/api/v1/work-orders/{orderId}"), HttpStatusCode.NotFound);
     }
 
     [Theory]

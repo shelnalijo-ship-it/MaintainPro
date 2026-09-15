@@ -35,9 +35,9 @@ public static class DatabaseInspector
             foreach (var (schema, name) in tables)
             {
                 var qualified = $"{quote.QuoteIdentifier(schema)}.{quote.QuoteIdentifier(name)}";
-                await using var exists = new NpgsqlCommand($"SELECT EXISTS (SELECT 1 FROM {qualified} LIMIT 1)", connection);
-                var hasRows = (bool)(await exists.ExecuteScalarAsync())!;
-                inventory.Add(new { Schema = schema, Table = name, HasRows = hasRows });
+                await using var count = new NpgsqlCommand($"SELECT COUNT(*) FROM {qualified}", connection);
+                var rowCount = (long)(await count.ExecuteScalarAsync())!;
+                inventory.Add(new { Schema = schema, Table = name, HasRows = rowCount > 0, RowCount = rowCount });
                 if (schema == "public" && name == "__EFMigrationsHistory")
                 {
                     await using var history = new NpgsqlCommand($"SELECT \"MigrationId\" FROM {qualified} ORDER BY \"MigrationId\"", connection);

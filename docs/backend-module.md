@@ -1,5 +1,7 @@
 # MaintainPro backend foundation, identity, and machine management
 
+This is the retained identity/machine module report. The subsequent [preventive planning module report](preventive-planning-module.md) records the new planning, versioned-checklist and work-order-generation implementation and its current validation results.
+
 The existing five-project .NET 10 solution now implements this module. The approved PostgreSQL database was empty before migration; both reviewed forward migrations have been applied to `maintainpro_db`. Four standard roles are initialized. The first administrator and live token issuance still require the local configuration described below.
 
 ## Architecture and changes
