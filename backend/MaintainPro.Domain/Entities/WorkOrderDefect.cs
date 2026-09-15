@@ -1,0 +1,18 @@
+using MaintainPro.Domain.Enums;
+
+namespace MaintainPro.Domain.Entities;
+
+public class WorkOrderDefect
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid WorkOrderId { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public string? Severity { get; set; }
+    public bool RequiresFollowUp { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public WorkOrder WorkOrder { get; set; } = null!;
+    public User CreatedByUser { get; set; } = null!;
+}

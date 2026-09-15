@@ -20,6 +20,8 @@ public class WorkOrder
     public DateTime? ApprovedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
     public int EscalationLevel { get; set; }
+    public int SubmissionVersion { get; set; }
+    public int HistoryVersion { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public Guid Version { get; set; } = Guid.NewGuid();

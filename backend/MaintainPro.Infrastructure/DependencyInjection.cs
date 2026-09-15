@@ -9,6 +9,9 @@ using MaintainPro.Application.MasterData;
 using MaintainPro.Application.Planning;
 using MaintainPro.Application.WorkOrders;
 using MaintainPro.Infrastructure.Planning;
+using MaintainPro.Infrastructure.Files;
+using MaintainPro.Application.Execution;
+using MaintainPro.Application.Reviews;
 using MaintainPro.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +56,13 @@ public static class DependencyInjection
         services.AddScoped<WorkOrderNumberAllocator>();
         services.AddScoped<IGenerationConcurrency, GenerationConcurrency>();
         services.AddScoped<WorkOrderGenerationService>();
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
+        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<WorkOrderExecutionService>();
+        services.AddScoped<WorkOrderEvidenceService>();
+        services.AddScoped<WorkOrderSubmissionService>();
+        services.AddScoped<WorkOrderReviewService>();
+        services.AddScoped<WorkOrderHistoryService>();
 
         return services;
     }

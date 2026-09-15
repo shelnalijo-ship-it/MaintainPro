@@ -146,6 +146,11 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
         };
         workOrder.Definition = Snapshot(plan, template, technician, workOrder.Id);
         db.WorkOrders.Add(workOrder);
+        MaintainPro.Application.Execution.ExecutionHistory.Record(db, workOrder, currentUser, clock,
+            "WorkOrder.Generated", details: "Generated with an immutable maintenance definition.");
+        if (technician is not null)
+            MaintainPro.Application.Execution.ExecutionHistory.Record(db, workOrder, currentUser, clock,
+                "WorkOrder.Assigned", details: $"Assigned to {workOrder.Definition.AssignedTechnicianName} ({technician.EmployeeId}).");
         plan.NextDueDate = next;
         audit.Record("WorkOrder.Generated", nameof(WorkOrder), workOrder.Id, newValues: new
         {

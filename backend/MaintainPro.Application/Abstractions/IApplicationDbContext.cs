@@ -6,6 +6,19 @@ namespace MaintainPro.Application.Abstractions;
 public interface IApplicationDbContext
 {
     bool HasActiveTransaction { get; }
+    DbSet<WorkOrderExecution> WorkOrderExecutions { get; }
+    DbSet<WorkOrderChecklistResult> WorkOrderChecklistResults { get; }
+    DbSet<SparePartUsage> SparePartUsages { get; }
+    DbSet<WorkOrderDefect> WorkOrderDefects { get; }
+    DbSet<FileRecord> FileRecords { get; }
+    DbSet<WorkOrderAttachment> WorkOrderAttachments { get; }
+    DbSet<WorkOrderSubmission> WorkOrderSubmissions { get; }
+    DbSet<WorkOrderSubmissionChecklistResult> WorkOrderSubmissionChecklistResults { get; }
+    DbSet<WorkOrderSubmissionAttachment> WorkOrderSubmissionAttachments { get; }
+    DbSet<WorkOrderSubmissionPartUsage> WorkOrderSubmissionPartUsages { get; }
+    DbSet<WorkOrderSubmissionDefect> WorkOrderSubmissionDefects { get; }
+    DbSet<WorkOrderApproval> WorkOrderApprovals { get; }
+    DbSet<WorkOrderHistoryEvent> WorkOrderHistoryEvents { get; }
     DbSet<Role> Roles { get; }
     DbSet<User> Users { get; }
     DbSet<UserRole> UserRoles { get; }

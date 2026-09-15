@@ -8,6 +8,8 @@ using MaintainPro.Api.Security;
 using MaintainPro.Api.Scheduling;
 using MaintainPro.Application.Abstractions;
 using MaintainPro.Infrastructure;
+using MaintainPro.Infrastructure.Files;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
@@ -29,6 +31,13 @@ if (args.Contains("--database-inspect"))
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddInfrastructure(builder.Configuration);
+var fileStorage = builder.Configuration.GetSection(FileStorageOptions.SectionName).Get<FileStorageOptions>() ?? new();
+if (fileStorage.MaxFileSizeBytes is < 1 or > 100 * 1024 * 1024)
+    throw new InvalidOperationException("FileStorage:MaxFileSizeBytes must be between 1 and 104857600.");
+// Leave room for multipart fields while storage independently counts and limits actual file bytes.
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = Math.Max(30_000_000, fileStorage.MaxFileSizeBytes + 1024 * 1024));
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = fileStorage.MaxFileSizeBytes + 1024 * 1024);
 builder.Services.AddApplicationAuthentication();
 builder.Services.AddProblemDetails();
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -92,6 +101,7 @@ app.MapMasterDataEndpoints();
 app.MapMachineEndpoints();
 app.MapPlanningEndpoints();
 app.MapWorkOrderEndpoints();
+app.MapExecutionEndpoints();
 
 app.Run();
 

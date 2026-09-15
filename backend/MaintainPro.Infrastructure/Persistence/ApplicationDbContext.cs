@@ -1,5 +1,6 @@
 using MaintainPro.Domain.Entities;
 using MaintainPro.Application.Abstractions;
+using MaintainPro.Domain.Enums;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -14,6 +15,19 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     }
 
     public DbSet<Role> Roles => Set<Role>();
+    public DbSet<WorkOrderExecution> WorkOrderExecutions => Set<WorkOrderExecution>();
+    public DbSet<WorkOrderChecklistResult> WorkOrderChecklistResults => Set<WorkOrderChecklistResult>();
+    public DbSet<SparePartUsage> SparePartUsages => Set<SparePartUsage>();
+    public DbSet<WorkOrderDefect> WorkOrderDefects => Set<WorkOrderDefect>();
+    public DbSet<FileRecord> FileRecords => Set<FileRecord>();
+    public DbSet<WorkOrderAttachment> WorkOrderAttachments => Set<WorkOrderAttachment>();
+    public DbSet<WorkOrderSubmission> WorkOrderSubmissions => Set<WorkOrderSubmission>();
+    public DbSet<WorkOrderSubmissionChecklistResult> WorkOrderSubmissionChecklistResults => Set<WorkOrderSubmissionChecklistResult>();
+    public DbSet<WorkOrderSubmissionAttachment> WorkOrderSubmissionAttachments => Set<WorkOrderSubmissionAttachment>();
+    public DbSet<WorkOrderSubmissionPartUsage> WorkOrderSubmissionPartUsages => Set<WorkOrderSubmissionPartUsage>();
+    public DbSet<WorkOrderSubmissionDefect> WorkOrderSubmissionDefects => Set<WorkOrderSubmissionDefect>();
+    public DbSet<WorkOrderApproval> WorkOrderApprovals => Set<WorkOrderApproval>();
+    public DbSet<WorkOrderHistoryEvent> WorkOrderHistoryEvents => Set<WorkOrderHistoryEvent>();
     public bool HasActiveTransaction => Database.CurrentTransaction is not null;
     public DbSet<User> Users => Set<User>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
@@ -53,6 +67,7 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         ChangeTracker.DetectChanges();
         foreach (var entry in ChangeTracker.Entries())
         {
+            ProtectExecutionHistory(entry);
             if (entry.State == EntityState.Added)
             {
                 if (entry.Entity is WorkOrder newOrder && !ChangeTracker.Entries<WorkOrderDefinition>()
@@ -86,6 +101,54 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (entry.Entity is WorkOrder workOrder) { workOrder.UpdatedAt = DateTime.UtcNow; workOrder.Version = Guid.NewGuid(); }
             if (entry.Entity is WorkOrderNumberSequence sequence) sequence.Version = Guid.NewGuid();
         }
+    }
+
+    private void ProtectExecutionHistory(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted)) return;
+        if (entry.Entity is WorkOrderSubmission or WorkOrderSubmissionChecklistResult
+            or WorkOrderSubmissionAttachment or WorkOrderSubmissionPartUsage or WorkOrderSubmissionDefect
+            or WorkOrderApproval or WorkOrderHistoryEvent or FileRecord
+            && entry.State is EntityState.Modified or EntityState.Deleted)
+            throw new InvalidOperationException("Submitted facts, decisions, file metadata and history are immutable.");
+
+        Guid? submissionId = entry.Entity switch
+        {
+            WorkOrderSubmissionChecklistResult x => x.WorkOrderSubmissionId,
+            WorkOrderSubmissionAttachment x => x.WorkOrderSubmissionId,
+            WorkOrderSubmissionPartUsage x => x.WorkOrderSubmissionId,
+            WorkOrderSubmissionDefect x => x.WorkOrderSubmissionId,
+            _ => null
+        };
+        if (submissionId.HasValue && entry.State == EntityState.Added
+            && !ChangeTracker.Entries<WorkOrderSubmission>().Any(x =>
+                x.State == EntityState.Added && x.Entity.Id == submissionId.Value))
+            throw new InvalidOperationException("Submission facts must be created together with their submission.");
+
+        if (entry.Entity is WorkOrder && entry.State == EntityState.Modified
+            && entry.OriginalValues.GetValue<WorkOrderLifecycleStatus>(nameof(WorkOrder.LifecycleStatus))
+                == WorkOrderLifecycleStatus.APPROVED)
+            throw new InvalidOperationException("Approved work orders are immutable.");
+
+        Guid? orderId = entry.Entity switch
+        {
+            WorkOrderExecution x => x.WorkOrderId,
+            WorkOrderChecklistResult x => x.WorkOrderId,
+            SparePartUsage x => x.WorkOrderId,
+            WorkOrderDefect x => x.WorkOrderId,
+            WorkOrderAttachment x => x.WorkOrderId,
+            _ => null
+        };
+        if (orderId is null) return;
+        var tracked = ChangeTracker.Entries<WorkOrder>().SingleOrDefault(x => x.Entity.Id == orderId);
+        var status = tracked is null
+            ? WorkOrders.AsNoTracking().Where(x => x.Id == orderId).Select(x => x.LifecycleStatus).Single()
+            : tracked.OriginalValues.GetValue<WorkOrderLifecycleStatus>(nameof(WorkOrder.LifecycleStatus));
+        // Start and resume create/update the draft in the same transaction as the transition.
+        var starting = tracked is not null && tracked.Entity.LifecycleStatus == WorkOrderLifecycleStatus.IN_PROGRESS
+            && status is WorkOrderLifecycleStatus.PLANNED or WorkOrderLifecycleStatus.ASSIGNED or WorkOrderLifecycleStatus.REJECTED;
+        if (status != WorkOrderLifecycleStatus.IN_PROGRESS && !starting)
+            throw new InvalidOperationException("Execution drafts can only change while work is in progress.");
     }
 
     private sealed class ApplicationTransaction(IDbContextTransaction transaction) : IApplicationTransaction

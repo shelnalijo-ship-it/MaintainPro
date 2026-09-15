@@ -16,6 +16,7 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
             var (status, title, detail) = exception switch
             {
                 AppException app => (app.StatusCode, Title(app.StatusCode), app.Message),
+                BadHttpRequestException { StatusCode: 413 } => (413, "Payload too large", "The request exceeds the upload size limit."),
                 BadHttpRequestException => (400, "Invalid request", "The request contains missing or invalid values."),
                 DbUpdateConcurrencyException => (409, "Conflict", "The record changed. Reload it and try again."),
                 DbUpdateException { InnerException: PostgresException { SqlState: "23505" } } =>
@@ -40,6 +41,6 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
     private static string Title(int status) => status switch
     {
         400 => "Validation failed", 401 => "Authentication required", 403 => "Forbidden",
-        404 => "Not found", 409 => "Conflict", 503 => "Service unavailable", _ => "Request failed"
+        404 => "Not found", 409 => "Conflict", 413 => "Payload too large", 503 => "Service unavailable", _ => "Request failed"
     };
 }

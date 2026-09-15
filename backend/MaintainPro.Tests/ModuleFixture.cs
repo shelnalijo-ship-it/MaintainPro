@@ -8,10 +8,13 @@ using MaintainPro.Application.MasterData;
 using MaintainPro.Application.Users;
 using MaintainPro.Application.Planning;
 using MaintainPro.Application.WorkOrders;
+using MaintainPro.Application.Execution;
+using MaintainPro.Application.Reviews;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
 using MaintainPro.Infrastructure.Planning;
+using MaintainPro.Infrastructure.Files;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +31,8 @@ internal sealed class ModuleFixture : IAsyncDisposable
     private readonly SqliteConnection connection;
     private int nextUser;
     private int nextMachine;
+    private readonly string fileStorageDirectory = Path.Combine(Path.GetTempPath(),
+        $"maintainpro-execution-tests-{Guid.NewGuid():N}");
 
     private ModuleFixture(SqliteConnection connection, ApplicationDbContext db)
     {
@@ -47,6 +52,12 @@ internal sealed class ModuleFixture : IAsyncDisposable
         Generation = new WorkOrderGenerationService(db, Actor, Audit, Recurrence, Clock, Numbers,
             new SqliteGenerationConcurrency(db));
         WorkOrders = new WorkOrderService(db, Actor, Clock);
+        Execution = new WorkOrderExecutionService(db, Actor, Audit, Clock);
+        Submissions = new WorkOrderSubmissionService(db, Actor, Audit, Clock);
+        Reviews = new WorkOrderReviewService(db, Actor, Audit, Clock);
+        History = new WorkOrderHistoryService(db, Actor);
+        FileStorage = new LocalFileStorageService(Options.Create(new FileStorageOptions { RootDirectory = fileStorageDirectory }));
+        Evidence = new WorkOrderEvidenceService(db, Actor, Audit, Clock, FileStorage);
     }
 
     public ApplicationDbContext Db { get; }
@@ -72,6 +83,13 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public WorkOrderNumberAllocator Numbers { get; }
     public WorkOrderGenerationService Generation { get; }
     public WorkOrderService WorkOrders { get; }
+    public WorkOrderExecutionService Execution { get; }
+    public WorkOrderSubmissionService Submissions { get; }
+    public WorkOrderReviewService Reviews { get; }
+    public WorkOrderHistoryService History { get; }
+    public LocalFileStorageService FileStorage { get; }
+    public WorkOrderEvidenceService Evidence { get; }
+    public string FileStorageDirectory => fileStorageDirectory;
 
     public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {
@@ -165,6 +183,14 @@ internal sealed class ModuleFixture : IAsyncDisposable
     {
         await Db.DisposeAsync();
         await connection.DisposeAsync();
+        if (Directory.Exists(fileStorageDirectory))
+        {
+            var resolved = Path.GetFullPath(fileStorageDirectory);
+            var testPrefix = Path.Combine(Path.GetFullPath(Path.GetTempPath()), "maintainpro-execution-tests-");
+            if (!resolved.StartsWith(testPrefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Test evidence cleanup must remain inside its generated temporary directory.");
+            Directory.Delete(resolved, recursive: true);
+        }
     }
 }
 

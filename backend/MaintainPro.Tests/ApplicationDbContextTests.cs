@@ -17,7 +17,7 @@ public class ApplicationDbContextTests
         "Host=127.0.0.1;Port=1;Database=maintainpro_model_tests;Username=model_test";
 
     [Fact]
-    public void Model_contains_only_the_eighteen_module_entities_without_shadow_properties()
+    public void Model_contains_the_module_entities_without_shadow_properties()
     {
         using var context = CreateContext();
         var entities = context.Model.GetEntityTypes().ToArray();
@@ -27,7 +27,20 @@ public class ApplicationDbContextTests
             nameof(AuditLog), nameof(Department), nameof(Location), nameof(Machine), nameof(MachineAssignmentHistory),
             nameof(MachineCategory), nameof(RefreshToken), nameof(Role), nameof(User), nameof(UserRole),
             nameof(MaintenanceType), nameof(MaintenancePlan), nameof(ChecklistTemplate), nameof(ChecklistItem),
-            nameof(WorkOrder), nameof(WorkOrderDefinition), nameof(WorkOrderChecklistItem), nameof(WorkOrderNumberSequence)
+            nameof(WorkOrder), nameof(WorkOrderDefinition), nameof(WorkOrderChecklistItem), nameof(WorkOrderNumberSequence),
+            nameof(WorkOrderExecution),
+            nameof(WorkOrderChecklistResult),
+            nameof(SparePartUsage),
+            nameof(WorkOrderDefect),
+            nameof(FileRecord),
+            nameof(WorkOrderAttachment),
+            nameof(WorkOrderSubmission),
+            nameof(WorkOrderSubmissionChecklistResult),
+            nameof(WorkOrderSubmissionAttachment),
+            nameof(WorkOrderSubmissionPartUsage),
+            nameof(WorkOrderSubmissionDefect),
+            nameof(WorkOrderApproval),
+            nameof(WorkOrderHistoryEvent)
         }.Order(StringComparer.Ordinal),
             entities.Select(entity => entity.ClrType.Name).Order(StringComparer.Ordinal));
 
@@ -82,7 +95,40 @@ public class ApplicationDbContextTests
             "WorkOrderDefinition.WorkOrder: WorkOrderId -> WorkOrder; required=True",
             "WorkOrderDefinition.MaintenanceType: MaintenanceTypeId -> MaintenanceType; required=True",
             "WorkOrderDefinition.ChecklistTemplate: ChecklistTemplateId -> ChecklistTemplate; required=True",
-            "WorkOrderChecklistItem.Definition: WorkOrderDefinitionId -> WorkOrderDefinition; required=True"
+            "WorkOrderChecklistItem.Definition: WorkOrderDefinitionId -> WorkOrderDefinition; required=True",
+            "WorkOrderExecution.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderExecution.Technician: TechnicianId -> User; required=True",
+            "WorkOrderChecklistResult.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderChecklistResult.WorkOrderChecklistItem: WorkOrderChecklistItemId -> WorkOrderChecklistItem; required=True",
+            "WorkOrderChecklistResult.CompletedByUser: CompletedByUserId -> User; required=True",
+            "SparePartUsage.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "SparePartUsage.CreatedByUser: CreatedByUserId -> User; required=True",
+            "WorkOrderDefect.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderDefect.CreatedByUser: CreatedByUserId -> User; required=True",
+            "FileRecord.UploadedByUser: UploadedByUserId -> User; required=True",
+            "WorkOrderAttachment.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderAttachment.File: FileId -> FileRecord; required=True",
+            "WorkOrderAttachment.WorkOrderChecklistItem: WorkOrderChecklistItemId -> WorkOrderChecklistItem; required=False",
+            "WorkOrderAttachment.UploadedByUser: UploadedByUserId -> User; required=True",
+            "WorkOrderSubmission.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderSubmission.SubmittedByUser: SubmittedByUserId -> User; required=True",
+            "WorkOrderSubmissionChecklistResult.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=True",
+            "WorkOrderSubmissionChecklistResult.WorkOrderChecklistItem: WorkOrderChecklistItemId -> WorkOrderChecklistItem; required=True",
+            "WorkOrderSubmissionChecklistResult.CompletedByUser: CompletedByUserId -> User; required=True",
+            "WorkOrderSubmissionAttachment.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=True",
+            "WorkOrderSubmissionAttachment.File: FileId -> FileRecord; required=True",
+            "WorkOrderSubmissionAttachment.WorkOrderChecklistItem: WorkOrderChecklistItemId -> WorkOrderChecklistItem; required=False",
+            "WorkOrderSubmissionAttachment.UploadedByUser: UploadedByUserId -> User; required=True",
+            "WorkOrderSubmissionPartUsage.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=True",
+            "WorkOrderSubmissionPartUsage.CreatedByUser: CreatedByUserId -> User; required=True",
+            "WorkOrderSubmissionDefect.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=True",
+            "WorkOrderSubmissionDefect.CreatedByUser: CreatedByUserId -> User; required=True",
+            "WorkOrderApproval.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderApproval.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=True",
+            "WorkOrderApproval.Supervisor: SupervisorId -> User; required=True",
+            "WorkOrderHistoryEvent.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderHistoryEvent.ActorUser: ActorUserId -> User; required=False",
+            "WorkOrderHistoryEvent.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=False"
         }.Order(StringComparer.Ordinal), relationships);
     }
 
@@ -116,7 +162,12 @@ public class ApplicationDbContextTests
             "MachineAssignmentHistory.MachineId", "MaintenanceType.Name",
             "ChecklistTemplate.MaintenancePlanId,Version", "ChecklistItem.ChecklistTemplateId,SequenceNumber",
             "WorkOrder.WorkOrderNumber", "WorkOrder.MaintenancePlanId,PlannedDate",
-            "WorkOrderDefinition.WorkOrderId", "WorkOrderChecklistItem.WorkOrderDefinitionId,SequenceNumber"
+            "WorkOrderDefinition.WorkOrderId", "WorkOrderChecklistItem.WorkOrderDefinitionId,SequenceNumber",
+            "WorkOrderExecution.WorkOrderId", "WorkOrderChecklistResult.WorkOrderId,WorkOrderChecklistItemId",
+            "FileRecord.StorageKey", "WorkOrderSubmission.WorkOrderId,VersionNumber",
+            "WorkOrderSubmissionChecklistResult.WorkOrderSubmissionId,WorkOrderChecklistItemId",
+            "WorkOrderSubmissionAttachment.WorkOrderSubmissionId,FileId",
+            "WorkOrderApproval.WorkOrderSubmissionId", "WorkOrderHistoryEvent.WorkOrderId,SequenceNumber"
         }.Order(StringComparer.Ordinal), uniqueIndexes);
     }
 
@@ -219,14 +270,14 @@ public class ApplicationDbContextTests
         var dateProperties = properties
             .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType) == typeof(DateOnly)).ToArray();
         var enumProperties = properties
-            .Where(property => property.ClrType.IsEnum).ToArray();
+            .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum).ToArray();
 
-        Assert.Equal(23, timestampProperties.Length);
+        Assert.Equal(43, timestampProperties.Length);
         Assert.All(timestampProperties,
             property => Assert.Equal("timestamp with time zone", property.GetColumnType()));
         Assert.Equal(7, dateProperties.Length);
         Assert.All(dateProperties, property => Assert.Equal("date", property.GetColumnType()));
-        Assert.Equal(9, enumProperties.Length);
+        Assert.Equal(14, enumProperties.Length);
         Assert.All(enumProperties,
             property => Assert.Equal(typeof(string), property.GetTypeMapping().Converter!.ProviderClrType));
     }
