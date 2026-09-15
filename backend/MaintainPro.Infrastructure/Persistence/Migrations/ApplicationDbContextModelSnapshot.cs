@@ -66,6 +66,380 @@ namespace MaintainPro.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("MaintainPro.Domain.Entities.Breakdown", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedTechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AssignmentVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BreakdownNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("HistoryVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InitialObservation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MachineCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("MachineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("MachineStatusVersionAtStop")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("MachineStopped")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PreviousMachineStatus")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ReportedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReportedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReporterEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReporterName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RestoreMachineStatus")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReturnedToServiceAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SubmissionVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SupervisorEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SupervisorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SupervisorName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TechnicianEmployeeId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TechnicianName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BreakdownNumber")
+                        .IsUnique();
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("AssignedTechnicianId", "Status");
+
+                    b.HasIndex("Status", "ReportedAt");
+
+                    b.HasIndex("SupervisorId", "Status");
+
+                    b.HasIndex("MachineId", "MachineStopped", "ReturnedToServiceAt");
+
+                    b.ToTable("Breakdowns", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Breakdowns_ReturnedToService", "\"ReturnedToServiceAt\" IS NULL OR (\"MachineStopped\" AND \"ClosedAt\" IS NOT NULL AND \"Status\" = 'CLOSED' AND \"ReturnedToServiceAt\" >= \"ReportedAt\")");
+
+                            t.HasCheckConstraint("CK_Breakdowns_Versions", "\"AssignmentVersion\" >= 0 AND \"SubmissionVersion\" >= 0 AND \"HistoryVersion\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownAssignmentHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AssignedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SequenceNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SupervisorEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SupervisorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SupervisorName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TechnicianEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TechnicianName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("SupervisorId");
+
+                    b.HasIndex("TechnicianId");
+
+                    b.HasIndex("BreakdownId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("BreakdownAssignmentHistories", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BreakdownAssignmentHistories_Sequence", "\"SequenceNumber\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EvidenceType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("BreakdownId", "FileId")
+                        .IsUnique();
+
+                    b.ToTable("BreakdownAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownHistoryEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActorName")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CorrectiveSubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SequenceNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SubmissionVersion")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("CorrectiveSubmissionId");
+
+                    b.HasIndex("BreakdownId", "SequenceNumber")
+                        .IsUnique();
+
+                    b.ToTable("BreakdownHistoryEvents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BreakdownHistoryEvents_Sequence", "\"SequenceNumber\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownNotificationEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AssignmentVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("EventReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BreakdownId");
+
+                    b.HasIndex("DeduplicationKey")
+                        .IsUnique();
+
+                    b.HasIndex("ProcessedAt", "BreakdownId");
+
+                    b.ToTable("BreakdownNotificationEvents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BreakdownNotificationEvents_AssignmentVersion", "\"AssignmentVersion\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownNumberSequence", b =>
+                {
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("LastValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Year");
+
+                    b.ToTable("BreakdownNumberSequences", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BreakdownNumberSequences_Value", "\"LastValue\" >= 0");
+
+                            t.HasCheckConstraint("CK_BreakdownNumberSequences_Year", "\"Year\" BETWEEN 1 AND 9999");
+                        });
+                });
+
             modelBuilder.Entity("MaintainPro.Domain.Entities.ChecklistItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -152,6 +526,294 @@ namespace MaintainPro.Infrastructure.Persistence.Migrations
                     b.ToTable("ChecklistTemplates", null, t =>
                         {
                             t.HasCheckConstraint("CK_ChecklistTemplates_Version", "\"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveActionDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AccumulatedDurationMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("AttemptStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CorrectiveAction")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RootCause")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TechnicianEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TechnicianName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BreakdownId")
+                        .IsUnique();
+
+                    b.HasIndex("TechnicianId");
+
+                    b.ToTable("CorrectiveActionDrafts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CorrectiveActionDrafts_Duration", "\"AccumulatedDurationMinutes\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrectiveSubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DecisionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SupervisorEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SupervisorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SupervisorName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BreakdownId");
+
+                    b.HasIndex("CorrectiveSubmissionId")
+                        .IsUnique();
+
+                    b.HasIndex("SupervisorId");
+
+                    b.ToTable("CorrectiveApprovals", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CorrectiveApprovals_RejectionRemarks", "\"Decision\" <> 'REJECTED' OR (\"Remarks\" IS NOT NULL AND length(trim(\"Remarks\")) > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectivePartUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PartName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PartNumber")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BreakdownId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("CorrectivePartUsages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CorrectivePartUsages_Quantity", "\"Quantity\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BreakdownId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CorrectiveAction")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DowntimeMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("DurationMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("RootCause")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TechnicianEmployeeId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TechnicianName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TechnicianId");
+
+                    b.HasIndex("BreakdownId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("CorrectiveSubmissions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CorrectiveSubmissions_Durations", "\"DurationMinutes\" >= 0 AND \"DowntimeMinutes\" >= 0");
+
+                            t.HasCheckConstraint("CK_CorrectiveSubmissions_Times", "\"CompletedAt\" >= \"StartedAt\" AND \"SubmittedAt\" >= \"CompletedAt\"");
+
+                            t.HasCheckConstraint("CK_CorrectiveSubmissions_Version", "\"VersionNumber\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmissionAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrectiveSubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EvidenceType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("CorrectiveSubmissionId", "FileId")
+                        .IsUnique();
+
+                    b.ToTable("CorrectiveSubmissionAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmissionPartUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrectiveSubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PartName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PartNumber")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectiveSubmissionId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("CorrectiveSubmissionPartUsages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CorrectiveSubmissionPartUsages_Quantity", "\"Quantity\" > 0");
                         });
                 });
 
@@ -348,6 +1010,10 @@ namespace MaintainPro.Infrastructure.Persistence.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid>("StatusVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("SupervisorUserId")
                         .HasColumnType("uuid");
@@ -1781,6 +2447,138 @@ namespace MaintainPro.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MaintainPro.Domain.Entities.Breakdown", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.User", "AssignedTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedTechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MaintainPro.Domain.Entities.Machine", "Machine")
+                        .WithMany()
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "ReportedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "Supervisor")
+                        .WithMany()
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedTechnician");
+
+                    b.Navigation("Machine");
+
+                    b.Navigation("ReportedByUser");
+
+                    b.Navigation("Supervisor");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownAssignmentHistory", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "Supervisor")
+                        .WithMany()
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("Supervisor");
+
+                    b.Navigation("Technician");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownAttachment", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.FileRecord", "File")
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "UploadedByUser")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("File");
+
+                    b.Navigation("UploadedByUser");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownHistoryEvent", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.CorrectiveSubmission", "Submission")
+                        .WithMany()
+                        .HasForeignKey("CorrectiveSubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("Submission");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.BreakdownNotificationEvent", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breakdown");
+                });
+
             modelBuilder.Entity("MaintainPro.Domain.Entities.ChecklistItem", b =>
                 {
                     b.HasOne("MaintainPro.Domain.Entities.ChecklistTemplate", "ChecklistTemplate")
@@ -1809,6 +2607,136 @@ namespace MaintainPro.Infrastructure.Persistence.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("MaintenancePlan");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveActionDraft", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("Technician");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveApproval", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.CorrectiveSubmission", "Submission")
+                        .WithOne("Review")
+                        .HasForeignKey("MaintainPro.Domain.Entities.CorrectiveApproval", "CorrectiveSubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "Supervisor")
+                        .WithMany()
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("Submission");
+
+                    b.Navigation("Supervisor");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectivePartUsage", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmission", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.Breakdown", "Breakdown")
+                        .WithMany()
+                        .HasForeignKey("BreakdownId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Breakdown");
+
+                    b.Navigation("Technician");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmissionAttachment", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.CorrectiveSubmission", "Submission")
+                        .WithMany("Attachments")
+                        .HasForeignKey("CorrectiveSubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.FileRecord", "File")
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "UploadedByUser")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("File");
+
+                    b.Navigation("Submission");
+
+                    b.Navigation("UploadedByUser");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmissionPartUsage", b =>
+                {
+                    b.HasOne("MaintainPro.Domain.Entities.CorrectiveSubmission", "Submission")
+                        .WithMany("PartUsages")
+                        .HasForeignKey("CorrectiveSubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MaintainPro.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Submission");
                 });
 
             modelBuilder.Entity("MaintainPro.Domain.Entities.EscalationSettings", b =>
@@ -2425,6 +3353,15 @@ namespace MaintainPro.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("MaintainPro.Domain.Entities.ChecklistTemplate", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("MaintainPro.Domain.Entities.CorrectiveSubmission", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("PartUsages");
+
+                    b.Navigation("Review");
                 });
 
             modelBuilder.Entity("MaintainPro.Domain.Entities.MaintenancePlan", b =>

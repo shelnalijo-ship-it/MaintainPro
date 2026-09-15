@@ -17,6 +17,10 @@ public static class Policies
     public const string ReadWorkOrders = nameof(ReadWorkOrders);
     public const string ManageNotifications = nameof(ManageNotifications);
     public const string ReadEscalations = nameof(ReadEscalations);
+    public const string ReadBreakdowns = nameof(ReadBreakdowns);
+    public const string ManageBreakdowns = nameof(ManageBreakdowns);
+    public const string ReadCalibrations = nameof(ReadCalibrations);
+    public const string ManageCalibrations = nameof(ManageCalibrations);
 
     public static void AddPolicies(IServiceCollection services)
     {
@@ -37,6 +41,10 @@ public static class Policies
             options.AddPolicy(ReadWorkOrders, policy => policy.RequireRole(RoleNames.All.ToArray()));
             options.AddPolicy(ManageNotifications, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
             options.AddPolicy(ReadEscalations, policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ReadBreakdowns, policy => policy.RequireRole(RoleNames.All.ToArray()));
+            options.AddPolicy(ManageBreakdowns, policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ReadCalibrations, policy => policy.RequireRole(RoleNames.All.ToArray()));
+            options.AddPolicy(ManageCalibrations, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
         });
     }
 }

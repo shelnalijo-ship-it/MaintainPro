@@ -28,6 +28,7 @@ public class Machine
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public Guid Version { get; set; } = Guid.NewGuid();
+    public Guid StatusVersion { get; set; } = Guid.NewGuid();
 
     public MachineCategory? Category { get; set; }
     public Department? Department { get; set; }

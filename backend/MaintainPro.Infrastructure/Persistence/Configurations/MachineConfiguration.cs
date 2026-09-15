@@ -11,6 +11,7 @@ public sealed class MachineConfiguration : IEntityTypeConfiguration<Machine>
         builder.ToTable("Machines");
         builder.HasKey(machine => machine.Id);
         builder.Property(machine => machine.Version).IsConcurrencyToken();
+        builder.Property(machine => machine.StatusVersion).IsConcurrencyToken();
         builder.Property(machine => machine.MachineCode).IsRequired();
         builder.Property(machine => machine.Name).IsRequired();
         builder.Property(machine => machine.Status).HasConversion<string>().IsRequired();

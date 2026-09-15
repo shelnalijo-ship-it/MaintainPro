@@ -70,7 +70,12 @@ public sealed record MachineDto(
     string? Notes,
     bool IsActive,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    CalibrationValidityStatus CurrentCalibrationStatus = CalibrationValidityStatus.NOT_REQUIRED,
+    string? CurrentCertificateNumber = null,
+    DateOnly? CalibrationExpiryDate = null,
+    int? DaysUntilCalibrationExpiry = null,
+    bool RenewalInProgress = false);
 
 public sealed record MachineAssignmentHistoryDto(
     Guid Id,

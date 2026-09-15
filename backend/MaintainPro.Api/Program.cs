@@ -56,6 +56,11 @@ builder.Services.AddOptions<NotificationProcessingOptions>()
         "NotificationProcessing:IntervalMinutes must be between 1 and 1440.")
     .ValidateOnStart();
 builder.Services.AddHostedService<NotificationProcessingService>();
+builder.Services.AddOptions<CalibrationProcessingOptions>()
+    .Bind(builder.Configuration.GetSection(CalibrationProcessingOptions.SectionName))
+    .Validate(x => x.IntervalHours is >= 1 and <= 168, "CalibrationProcessing:IntervalHours must be between 1 and 168.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<CalibrationProcessingService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
@@ -109,6 +114,8 @@ app.MapPlanningEndpoints();
 app.MapWorkOrderEndpoints();
 app.MapExecutionEndpoints();
 app.MapNotificationEndpoints();
+app.MapBreakdownEndpoints();
+app.MapCalibrationEndpoints();
 
 app.Run();
 

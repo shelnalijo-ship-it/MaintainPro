@@ -28,6 +28,11 @@ public sealed class NotificationProcessingService(IServiceScopeFactory scopes,
                 logger.LogInformation("Reminders evaluated {Orders} orders, created {Notifications} notifications and {Escalations} escalations; {Errors} errors",
                     result.WorkOrdersEvaluated, result.NotificationsCreated, result.EscalationsCreated, result.Errors);
                 delay = NextDelay(result, options.Value.IntervalMinutes);
+                var breakdownProcessor = scope.ServiceProvider.GetRequiredService<BreakdownNotificationProcessor>();
+                var breakdownResult = await breakdownProcessor.ProcessPendingAsync(stoppingToken);
+                logger.LogInformation("Breakdown notifications evaluated {Breakdowns} breakdowns and created {Notifications} notifications; {Errors} errors",
+                    breakdownResult.BreakdownsEvaluated, breakdownResult.NotificationsCreated, breakdownResult.Errors);
+                if (breakdownResult.Errors > 0 && delay > TimeSpan.FromMinutes(15)) delay = TimeSpan.FromMinutes(15);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
             catch (Exception exception)

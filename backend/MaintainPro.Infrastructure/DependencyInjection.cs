@@ -13,6 +13,8 @@ using MaintainPro.Infrastructure.Files;
 using MaintainPro.Application.Notifications;
 using MaintainPro.Application.Execution;
 using MaintainPro.Application.Reviews;
+using MaintainPro.Application.Breakdowns;
+using MaintainPro.Application.Calibrations;
 using MaintainPro.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +74,18 @@ public static class DependencyInjection
         services.AddScoped<EscalationQueryService>();
         services.AddScoped<ReminderProcessingService>();
         services.AddScoped<WorkOrderAssignmentService>();
+        services.AddScoped<BreakdownService>();
+        services.AddScoped<BreakdownNumberAllocator>();
+        services.AddScoped<CorrectiveExecutionService>();
+        services.AddScoped<CorrectiveSubmissionService>();
+        services.AddScoped<CorrectiveReviewService>();
+        services.AddScoped<BreakdownEvidenceService>();
+        services.AddScoped<BreakdownNotificationService>();
+        services.AddScoped<BreakdownNotificationProcessor>();
+        services.AddSingleton<CalibrationTimingService>();
+        services.AddScoped<CalibrationService>();
+        services.AddScoped<CalibrationRenewalService>();
+        services.AddScoped<CalibrationReminderProcessor>();
 
         return services;
     }

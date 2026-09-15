@@ -11,6 +11,7 @@ using MaintainPro.Application.WorkOrders;
 using MaintainPro.Application.Execution;
 using MaintainPro.Application.Reviews;
 using MaintainPro.Application.Notifications;
+using MaintainPro.Application.Breakdowns;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
@@ -66,6 +67,13 @@ internal sealed class ModuleFixture : IAsyncDisposable
         Escalations = new EscalationQueryService(db, Actor);
         Reminders = new ReminderProcessingService(db, Actor, Audit, Clock, NotificationEvents,
             new SqliteGenerationConcurrency(db), Generation);
+        CorrectiveExecution = new CorrectiveExecutionService(db, Actor, Audit, Clock);
+        CorrectiveSubmissions = new CorrectiveSubmissionService(db, Actor, Audit, Clock);
+        CorrectiveReviews = new CorrectiveReviewService(db, Actor, Audit, Clock);
+        BreakdownEvidence = new BreakdownEvidenceService(db, Actor, Audit, Clock, FileStorage);
+        BreakdownNotifications = new BreakdownNotificationProcessor(db, Actor, Audit, Clock,
+            new SqliteGenerationConcurrency(db));
+        Breakdowns = new BreakdownService(db, Actor, Audit, Clock, new SqliteGenerationConcurrency(db));
     }
 
     public ApplicationDbContext Db { get; }
@@ -104,6 +112,12 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public EscalationSettingsService EscalationSettings { get; }
     public EscalationQueryService Escalations { get; }
     public ReminderProcessingService Reminders { get; }
+    public CorrectiveExecutionService CorrectiveExecution { get; }
+    public CorrectiveSubmissionService CorrectiveSubmissions { get; }
+    public CorrectiveReviewService CorrectiveReviews { get; }
+    public BreakdownEvidenceService BreakdownEvidence { get; }
+    public BreakdownNotificationProcessor BreakdownNotifications { get; }
+    public BreakdownService Breakdowns { get; }
 
     public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {

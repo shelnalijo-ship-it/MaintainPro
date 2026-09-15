@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using MaintainPro.Application.Abstractions;
 using MaintainPro.Application.Common;
+using MaintainPro.Application.Calibrations;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Domain.Enums;
 using MaintainPro.Domain.Security;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MaintainPro.Application.Machines;
 
 public sealed class MachineService(
-    IApplicationDbContext db, ICurrentUser currentUser, IAuditWriter audit)
+    IApplicationDbContext db, ICurrentUser currentUser, IAuditWriter audit, TimeProvider? clock = null)
 {
     private static readonly Expression<Func<Machine, MachineDto>> Projection = machine => new(
         machine.Id, machine.MachineCode, machine.AssetNumber, machine.Name, machine.CategoryId,
@@ -18,7 +19,9 @@ public sealed class MachineService(
         machine.WarrantyExpiryDate, machine.Status, machine.Criticality,
         machine.CalibrationRequired, machine.PreventiveMaintenanceRequired,
         machine.MachineOwnerUserId, machine.SupervisorUserId, machine.Notes,
-        machine.IsActive, machine.CreatedAt, machine.UpdatedAt);
+        machine.IsActive, machine.CreatedAt, machine.UpdatedAt,
+        machine.CalibrationRequired ? CalibrationValidityStatus.EXPIRED : CalibrationValidityStatus.NOT_REQUIRED,
+        null, null, null, false);
 
     public async Task<PagedResult<MachineDto>> ListAsync(MachineQuery request, CancellationToken ct = default)
     {
@@ -53,12 +56,15 @@ public sealed class MachineService(
         var items = await query.OrderBy(x => x.MachineCode).ThenBy(x => x.Id)
             .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(Projection).ToListAsync(ct);
-        return new(items, request.Page, request.PageSize, total);
+        return new(await EnrichCalibrationAsync(items, ct), request.Page, request.PageSize, total);
     }
 
-    public async Task<MachineDto> GetAsync(Guid id, CancellationToken ct = default) =>
-        await VisibleMachines().AsNoTracking().Where(x => x.Id == id).Select(Projection)
+    public async Task<MachineDto> GetAsync(Guid id, CancellationToken ct = default)
+    {
+        var item = await VisibleMachines().AsNoTracking().Where(x => x.Id == id).Select(Projection)
             .SingleOrDefaultAsync(ct) ?? throw new AppException(404, "Machine not found.");
+        return (await EnrichCalibrationAsync(new[] { item }, ct))[0];
+    }
 
     public async Task<IReadOnlyList<MachineAssignmentHistoryDto>> GetAssignmentHistoryAsync(
         Guid id, CancellationToken ct = default)
@@ -99,6 +105,7 @@ public sealed class MachineService(
         await using var transaction = await db.BeginTransactionAsync(ct);
         var machine = await FindAsync(id, ct);
         var normalized = await ValidateWriteAsync(request, machine, ct);
+        await RequireSafeBreakdownStatusAsync(machine.Id, normalized.Status, ct);
         var previous = ToDto(machine);
         ApplyFields(machine, normalized);
         await ApplyAssignmentsAsync(machine, normalized.MachineOwnerUserId, normalized.SupervisorUserId,
@@ -117,6 +124,7 @@ public sealed class MachineService(
         ValidateStatus(request.Status);
         await using var transaction = await db.BeginTransactionAsync(ct);
         var machine = await FindAsync(id, ct);
+        await RequireSafeBreakdownStatusAsync(machine.Id, request.Status, ct);
         var previous = ToDto(machine);
         machine.Status = request.Status;
         machine.IsActive = request.Status == MachineStatus.Decommissioned ? false : request.IsActive ?? machine.IsActive;
@@ -167,6 +175,14 @@ public sealed class MachineService(
 
     private async Task<Machine> FindAsync(Guid id, CancellationToken ct) =>
         await db.Machines.SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw new AppException(404, "Machine not found.");
+
+    private async Task RequireSafeBreakdownStatusAsync(Guid machineId, MachineStatus status, CancellationToken ct)
+    {
+        if (status is MachineStatus.Operational or MachineStatus.Standby &&
+            await db.Breakdowns.AnyAsync(x => x.MachineId == machineId && x.MachineStopped &&
+                x.ReturnedToServiceAt == null, ct))
+            throw new AppException(409, "Stopped-machine breakdowns require approved corrective work and the explicit return-to-service action.");
+    }
 
     private async Task<MachineWriteRequest> ValidateWriteAsync(MachineWriteRequest request, Machine? existing, CancellationToken ct)
     {
@@ -294,7 +310,30 @@ public sealed class MachineService(
         machine.LocationId, machine.InstallationDate, machine.CommissioningDate, machine.WarrantyExpiryDate,
         machine.Status, machine.Criticality, machine.CalibrationRequired, machine.PreventiveMaintenanceRequired,
         machine.MachineOwnerUserId, machine.SupervisorUserId, machine.Notes, machine.IsActive,
-        machine.CreatedAt, machine.UpdatedAt);
+        machine.CreatedAt, machine.UpdatedAt,
+        machine.CalibrationRequired ? CalibrationValidityStatus.EXPIRED : CalibrationValidityStatus.NOT_REQUIRED);
+
+    private async Task<IReadOnlyList<MachineDto>> EnrichCalibrationAsync(IReadOnlyList<MachineDto> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return items;
+        var ids = items.Select(x => x.Id).ToArray();
+        var certificates = await db.CalibrationCertificates.AsNoTracking().Where(x => ids.Contains(x.MachineId)).ToListAsync(ct);
+        var renewals = (await db.CalibrationRenewals.AsNoTracking().Where(x => ids.Contains(x.MachineId) &&
+            x.Status == CalibrationRenewalStatus.IN_PROGRESS).Select(x => x.MachineId).ToListAsync(ct)).ToHashSet();
+        var today = DateOnly.FromDateTime((clock ?? TimeProvider.System).GetUtcNow().UtcDateTime);
+        var timing = new CalibrationTimingService();
+        return items.Select(item =>
+        {
+            var machine = new Machine { MachineCode = item.MachineCode, Name = item.Name, Id = item.Id,
+                CalibrationRequired = item.CalibrationRequired };
+            var current = timing.Current(certificates.Where(x => x.MachineId == item.Id), today);
+            var state = timing.Evaluate(machine, current, renewals.Contains(item.Id), today);
+            return item with { CurrentCalibrationStatus = state.ValidityStatus,
+                CurrentCertificateNumber = state.CurrentCertificateNumber,
+                CalibrationExpiryDate = state.ExpiryDate, DaysUntilCalibrationExpiry = state.DaysRemaining,
+                RenewalInProgress = state.RenewalStatus == CalibrationRenewalStatus.IN_PROGRESS };
+        }).ToArray();
+    }
 
     private static void ValidateStatus(MachineStatus value)
     {

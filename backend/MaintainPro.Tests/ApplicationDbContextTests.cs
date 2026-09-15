@@ -45,7 +45,11 @@ public class ApplicationDbContextTests
             nameof(NotificationDeliveryAttempt),
             nameof(WorkOrderEscalation),
             nameof(EscalationSettings),
-            nameof(NotificationEvent)
+            nameof(NotificationEvent), nameof(Breakdown), nameof(BreakdownNumberSequence),
+            nameof(BreakdownAssignmentHistory), nameof(BreakdownHistoryEvent), nameof(BreakdownNotificationEvent),
+            nameof(CorrectiveActionDraft), nameof(CorrectivePartUsage), nameof(BreakdownAttachment),
+            nameof(CorrectiveSubmission), nameof(CorrectiveSubmissionPartUsage), nameof(CorrectiveSubmissionAttachment),
+            nameof(CorrectiveApproval)
         }.Order(StringComparer.Ordinal),
             entities.Select(entity => entity.ClrType.Name).Order(StringComparer.Ordinal));
 
@@ -140,7 +144,36 @@ public class ApplicationDbContextTests
             "WorkOrderEscalation.RecipientUser: RecipientUserId -> User; required=True",
             "WorkOrderEscalation.Notification: NotificationId -> Notification; required=True",
             "EscalationSettings.UpdatedByUser: UpdatedByUserId -> User; required=False",
-            "NotificationEvent.WorkOrder: WorkOrderId -> WorkOrder; required=True"
+            "NotificationEvent.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "Breakdown.Machine: MachineId -> Machine; required=True",
+            "Breakdown.ReportedByUser: ReportedByUserId -> User; required=True",
+            "Breakdown.AssignedTechnician: AssignedTechnicianId -> User; required=False",
+            "Breakdown.Supervisor: SupervisorId -> User; required=True",
+            "BreakdownAssignmentHistory.Breakdown: BreakdownId -> Breakdown; required=True",
+            "BreakdownAssignmentHistory.Technician: TechnicianId -> User; required=True",
+            "BreakdownAssignmentHistory.Supervisor: SupervisorId -> User; required=True",
+            "BreakdownAssignmentHistory.AssignedByUser: AssignedByUserId -> User; required=True",
+            "BreakdownHistoryEvent.Breakdown: BreakdownId -> Breakdown; required=True",
+            "BreakdownHistoryEvent.ActorUser: ActorUserId -> User; required=False",
+            "BreakdownHistoryEvent.Submission: CorrectiveSubmissionId -> CorrectiveSubmission; required=False",
+            "BreakdownNotificationEvent.Breakdown: BreakdownId -> Breakdown; required=True",
+            "CorrectiveActionDraft.Breakdown: BreakdownId -> Breakdown; required=True",
+            "CorrectiveActionDraft.Technician: TechnicianId -> User; required=True",
+            "CorrectivePartUsage.Breakdown: BreakdownId -> Breakdown; required=True",
+            "CorrectivePartUsage.CreatedByUser: CreatedByUserId -> User; required=True",
+            "BreakdownAttachment.Breakdown: BreakdownId -> Breakdown; required=True",
+            "BreakdownAttachment.File: FileId -> FileRecord; required=True",
+            "BreakdownAttachment.UploadedByUser: UploadedByUserId -> User; required=True",
+            "CorrectiveSubmission.Breakdown: BreakdownId -> Breakdown; required=True",
+            "CorrectiveSubmission.Technician: TechnicianId -> User; required=True",
+            "CorrectiveSubmissionPartUsage.Submission: CorrectiveSubmissionId -> CorrectiveSubmission; required=True",
+            "CorrectiveSubmissionPartUsage.CreatedByUser: CreatedByUserId -> User; required=True",
+            "CorrectiveSubmissionAttachment.Submission: CorrectiveSubmissionId -> CorrectiveSubmission; required=True",
+            "CorrectiveSubmissionAttachment.File: FileId -> FileRecord; required=True",
+            "CorrectiveSubmissionAttachment.UploadedByUser: UploadedByUserId -> User; required=True",
+            "CorrectiveApproval.Breakdown: BreakdownId -> Breakdown; required=True",
+            "CorrectiveApproval.Submission: CorrectiveSubmissionId -> CorrectiveSubmission; required=True",
+            "CorrectiveApproval.Supervisor: SupervisorId -> User; required=True"
         }.Order(StringComparer.Ordinal), relationships);
     }
 
@@ -182,7 +215,11 @@ public class ApplicationDbContextTests
             "WorkOrderApproval.WorkOrderSubmissionId", "WorkOrderHistoryEvent.WorkOrderId,SequenceNumber",
             "Notification.DeduplicationKey", "NotificationDeliveryAttempt.NotificationId,Channel,AttemptNumber",
             "WorkOrderEscalation.DeduplicationKey", "WorkOrderEscalation.NotificationId",
-            "NotificationEvent.DeduplicationKey"
+            "NotificationEvent.DeduplicationKey", "Breakdown.BreakdownNumber",
+            "BreakdownAssignmentHistory.BreakdownId,SequenceNumber", "BreakdownHistoryEvent.BreakdownId,SequenceNumber",
+            "BreakdownNotificationEvent.DeduplicationKey", "CorrectiveActionDraft.BreakdownId",
+            "BreakdownAttachment.BreakdownId,FileId", "CorrectiveSubmission.BreakdownId,VersionNumber",
+            "CorrectiveSubmissionAttachment.CorrectiveSubmissionId,FileId", "CorrectiveApproval.CorrectiveSubmissionId"
         }.Order(StringComparer.Ordinal), uniqueIndexes);
     }
 
@@ -210,7 +247,8 @@ public class ApplicationDbContextTests
         using var context = CreateContext();
 
         foreach (var type in new[] { typeof(User), typeof(Machine), typeof(RefreshToken),
-            typeof(MaintenanceType), typeof(MaintenancePlan), typeof(WorkOrder), typeof(WorkOrderNumberSequence) })
+            typeof(MaintenanceType), typeof(MaintenancePlan), typeof(WorkOrder), typeof(WorkOrderNumberSequence),
+            typeof(Breakdown), typeof(BreakdownNumberSequence), typeof(BreakdownNotificationEvent) })
         {
             var entity = context.Model.FindEntityType(type)!;
             Assert.Contains(entity.GetProperties(), property => property.IsConcurrencyToken);
@@ -287,12 +325,12 @@ public class ApplicationDbContextTests
         var enumProperties = properties
             .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum).ToArray();
 
-        Assert.Equal(52, timestampProperties.Length);
+        Assert.Equal(76, timestampProperties.Length);
         Assert.All(timestampProperties,
             property => Assert.Equal("timestamp with time zone", property.GetColumnType()));
         Assert.Equal(7, dateProperties.Length);
         Assert.All(dateProperties, property => Assert.Equal("date", property.GetColumnType()));
-        Assert.Equal(21, enumProperties.Length);
+        Assert.Equal(30, enumProperties.Length);
         Assert.All(enumProperties,
             property => Assert.Equal(typeof(string), property.GetTypeMapping().Converter!.ProviderClrType));
     }

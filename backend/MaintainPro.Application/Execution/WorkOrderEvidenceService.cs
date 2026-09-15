@@ -1,4 +1,6 @@
 using MaintainPro.Application.Abstractions;
+using MaintainPro.Application.Breakdowns;
+using MaintainPro.Application.Calibrations;
 using MaintainPro.Application.Common;
 using MaintainPro.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -65,11 +67,19 @@ public sealed class WorkOrderEvidenceService(IApplicationDbContext db, ICurrentU
     public async Task<FileDownload> DownloadAsync(Guid fileId, CancellationToken ct = default)
     {
         var visible = ExecutionAccess.VisibleWorkOrders(db, currentUser);
+        var visibleBreakdowns = BreakdownAccess.Visible(db, currentUser);
+        var visibleCalibrationMachines = CalibrationAccess.VisibleMachines(db, currentUser);
         var file = await db.FileRecords.AsNoTracking().Where(file => file.Id == fileId &&
             (db.WorkOrderAttachments.Any(attachment => attachment.FileId == file.Id && !attachment.IsDeleted &&
                 visible.Any(order => order.Id == attachment.WorkOrderId)) ||
              db.WorkOrderSubmissionAttachments.Any(attachment => attachment.FileId == file.Id &&
-                visible.Any(order => order.Id == attachment.Submission.WorkOrderId))))
+                visible.Any(order => order.Id == attachment.Submission.WorkOrderId)) ||
+             db.BreakdownAttachments.Any(attachment => attachment.FileId == file.Id && !attachment.IsDeleted &&
+                visibleBreakdowns.Any(breakdown => breakdown.Id == attachment.BreakdownId)) ||
+             db.CorrectiveSubmissionAttachments.Any(attachment => attachment.FileId == file.Id &&
+                visibleBreakdowns.Any(breakdown => breakdown.Id == attachment.Submission.BreakdownId)) ||
+             db.CalibrationCertificates.Any(certificate => certificate.CertificateFileId == file.Id &&
+                visibleCalibrationMachines.Any(machine => machine.Id == certificate.MachineId))))
             .SingleOrDefaultAsync(ct) ?? throw new AppException(404, "File not found.");
         try
         {

@@ -5,7 +5,22 @@ namespace MaintainPro.Application.Abstractions;
 
 public interface IApplicationDbContext
 {
+    DbSet<CalibrationCertificate> CalibrationCertificates { get; }
+    DbSet<CalibrationRenewal> CalibrationRenewals { get; }
+    DbSet<CalibrationNotificationEvent> CalibrationNotificationEvents { get; }
     bool HasActiveTransaction { get; }
+    DbSet<Breakdown> Breakdowns { get; }
+    DbSet<BreakdownNumberSequence> BreakdownNumberSequences { get; }
+    DbSet<BreakdownAssignmentHistory> BreakdownAssignmentHistories { get; }
+    DbSet<BreakdownHistoryEvent> BreakdownHistoryEvents { get; }
+    DbSet<BreakdownNotificationEvent> BreakdownNotificationEvents { get; }
+    DbSet<CorrectiveActionDraft> CorrectiveActionDrafts { get; }
+    DbSet<CorrectivePartUsage> CorrectivePartUsages { get; }
+    DbSet<BreakdownAttachment> BreakdownAttachments { get; }
+    DbSet<CorrectiveSubmission> CorrectiveSubmissions { get; }
+    DbSet<CorrectiveSubmissionPartUsage> CorrectiveSubmissionPartUsages { get; }
+    DbSet<CorrectiveSubmissionAttachment> CorrectiveSubmissionAttachments { get; }
+    DbSet<CorrectiveApproval> CorrectiveApprovals { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts { get; }
     DbSet<WorkOrderEscalation> WorkOrderEscalations { get; }
