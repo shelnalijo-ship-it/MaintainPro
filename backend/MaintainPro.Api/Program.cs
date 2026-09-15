@@ -50,6 +50,12 @@ builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddHostedService<IdentityInitializationService>();
 builder.Services.Configure<MaintenanceGenerationOptions>(builder.Configuration.GetSection(MaintenanceGenerationOptions.SectionName));
 builder.Services.AddHostedService<MaintenanceGenerationService>();
+builder.Services.AddOptions<NotificationProcessingOptions>()
+    .Bind(builder.Configuration.GetSection(NotificationProcessingOptions.SectionName))
+    .Validate(options => options.IntervalMinutes is >= 1 and <= 1440,
+        "NotificationProcessing:IntervalMinutes must be between 1 and 1440.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<NotificationProcessingService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
@@ -102,6 +108,7 @@ app.MapMachineEndpoints();
 app.MapPlanningEndpoints();
 app.MapWorkOrderEndpoints();
 app.MapExecutionEndpoints();
+app.MapNotificationEndpoints();
 
 app.Run();
 

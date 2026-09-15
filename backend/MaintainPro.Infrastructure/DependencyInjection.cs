@@ -10,6 +10,7 @@ using MaintainPro.Application.Planning;
 using MaintainPro.Application.WorkOrders;
 using MaintainPro.Infrastructure.Planning;
 using MaintainPro.Infrastructure.Files;
+using MaintainPro.Application.Notifications;
 using MaintainPro.Application.Execution;
 using MaintainPro.Application.Reviews;
 using MaintainPro.Domain.Entities;
@@ -63,6 +64,14 @@ public static class DependencyInjection
         services.AddScoped<WorkOrderSubmissionService>();
         services.AddScoped<WorkOrderReviewService>();
         services.AddScoped<WorkOrderHistoryService>();
+        services.AddSingleton<IWorkOrderTimingService, WorkOrderTimingService>();
+        services.AddScoped<NotificationWriter>();
+        services.AddScoped<NotificationService>();
+        services.AddScoped<NotificationEventService>();
+        services.AddScoped<EscalationSettingsService>();
+        services.AddScoped<EscalationQueryService>();
+        services.AddScoped<ReminderProcessingService>();
+        services.AddScoped<WorkOrderAssignmentService>();
 
         return services;
     }

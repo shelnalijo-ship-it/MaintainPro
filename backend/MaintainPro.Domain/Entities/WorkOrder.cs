@@ -22,6 +22,9 @@ public class WorkOrder
     public int EscalationLevel { get; set; }
     public int SubmissionVersion { get; set; }
     public int HistoryVersion { get; set; }
+    public int AssignmentVersion { get; set; }
+    public string? CurrentTechnicianName { get; set; }
+    public string? CurrentTechnicianEmployeeId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public Guid Version { get; set; } = Guid.NewGuid();

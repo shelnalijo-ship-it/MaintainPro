@@ -24,6 +24,22 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
         if (request.MaxOccurrences is < 1 or > 1000)
             throw new AppException(400, "MaxOccurrences must be between 1 and 1000.");
 
+        return await GenerateThroughAsync(through, request.MaxOccurrences, ct);
+    }
+
+    // Reminder preparation can generate upcoming occurrences; the public due-only contract stays intact.
+    public Task<GenerationSummary> GenerateUpcomingAsync(int daysAhead, CancellationToken ct = default)
+    {
+        if (currentUser.UserId.HasValue) Guard.RequireRole(currentUser, RoleNames.Manager, RoleNames.Admin);
+        if (daysAhead is < 0 or > 365) throw new AppException(400, "Days ahead must be between 0 and 365.");
+        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+        var through = DateOnly.FromDayNumber(Math.Min(DateOnly.MaxValue.DayNumber, today.DayNumber + daysAhead));
+        return GenerateThroughAsync(through, 500, ct);
+    }
+
+    private async Task<GenerationSummary> GenerateThroughAsync(DateOnly through, int maxOccurrences, CancellationToken ct)
+    {
+
         var planIds = await db.MaintenancePlans.AsNoTracking()
             .Where(x => x.IsActive && x.NextDueDate <= through)
             .OrderBy(x => x.NextDueDate).ThenBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
@@ -32,9 +48,10 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
         var issues = new List<GenerationIssue>();
         var skipped = 0;
         var created = 0;
+        var notificationCount = 0;
         var advanced = 0;
         // Round-robin catch-up lets each eligible plan progress before an older plan consumes the batch.
-        while (advanced < request.MaxOccurrences && queue.TryDequeue(out var planId))
+        while (advanced < maxOccurrences && queue.TryDequeue(out var planId))
         {
             ct.ThrowIfCancellationRequested();
             evaluated.Add(planId);
@@ -52,12 +69,13 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
             advanced++;
             if (result.Created) created++;
             else skipped++;
+            notificationCount += result.NotificationsCreated;
             if (result.StillDue) queue.Enqueue(planId);
         }
 
         // Failed/disabled-machine plans retain their cursor and can be retried after configuration is corrected.
         var hasMore = await db.MaintenancePlans.AsNoTracking().AnyAsync(x => x.IsActive && x.NextDueDate <= through, ct);
-        return new(evaluated.Count, created, skipped, issues.Count, hasMore, issues);
+        return new(evaluated.Count, created, skipped, issues.Count, hasMore, issues, notificationCount);
     }
 
     private async Task<OccurrenceResult> GenerateOccurrenceWithRetryAsync(Guid planId, DateOnly through, CancellationToken ct)
@@ -152,6 +170,8 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
             MaintainPro.Application.Execution.ExecutionHistory.Record(db, workOrder, currentUser, clock,
                 "WorkOrder.Assigned", details: $"Assigned to {workOrder.Definition.AssignedTechnicianName} ({technician.EmployeeId}).");
         plan.NextDueDate = next;
+        var assignmentNotification = await MaintainPro.Application.Notifications.WorkflowNotificationHooks.AssignedAsync(
+            db, workOrder, currentUser, audit, clock, ct: ct);
         audit.Record("WorkOrder.Generated", nameof(WorkOrder), workOrder.Id, newValues: new
         {
             workOrder.WorkOrderNumber, workOrder.MachineId, workOrder.MaintenancePlanId,
@@ -162,7 +182,7 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
         });
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
-        return new(true, true, next <= through);
+        return new(true, true, next <= through, NotificationsCreated: assignmentNotification.NotificationsCreated);
     }
 
     private static WorkOrderDefinition Snapshot(MaintenancePlan plan, ChecklistTemplate template, User? technician, Guid workOrderId)
@@ -208,5 +228,6 @@ public sealed class WorkOrderGenerationService(IApplicationDbContext db, ICurren
     private static bool HasRole(User? user, string role) => user is { IsActive: true } &&
         user.UserRoles.Any(x => x.Role.Name == role);
     private static string FullName(User user) => $"{user.FirstName} {user.LastName}".Trim();
-    private sealed record OccurrenceResult(bool Created, bool Advanced, bool StillDue, string? Error = null);
+    private sealed record OccurrenceResult(bool Created, bool Advanced, bool StillDue, string? Error = null,
+        int NotificationsCreated = 0);
 }

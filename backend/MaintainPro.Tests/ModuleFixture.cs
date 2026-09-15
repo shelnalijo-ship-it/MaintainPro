@@ -10,6 +10,7 @@ using MaintainPro.Application.Planning;
 using MaintainPro.Application.WorkOrders;
 using MaintainPro.Application.Execution;
 using MaintainPro.Application.Reviews;
+using MaintainPro.Application.Notifications;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
@@ -58,6 +59,13 @@ internal sealed class ModuleFixture : IAsyncDisposable
         History = new WorkOrderHistoryService(db, Actor);
         FileStorage = new LocalFileStorageService(Options.Create(new FileStorageOptions { RootDirectory = fileStorageDirectory }));
         Evidence = new WorkOrderEvidenceService(db, Actor, Audit, Clock, FileStorage);
+        NotificationWriter = new NotificationWriter(db, Clock);
+        Notifications = new NotificationService(db, Actor, Clock);
+        NotificationEvents = new NotificationEventService(db, Actor, Audit, Clock);
+        EscalationSettings = new EscalationSettingsService(db, Actor, Audit, Clock);
+        Escalations = new EscalationQueryService(db, Actor);
+        Reminders = new ReminderProcessingService(db, Actor, Audit, Clock, NotificationEvents,
+            new SqliteGenerationConcurrency(db), Generation);
     }
 
     public ApplicationDbContext Db { get; }
@@ -90,6 +98,12 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public LocalFileStorageService FileStorage { get; }
     public WorkOrderEvidenceService Evidence { get; }
     public string FileStorageDirectory => fileStorageDirectory;
+    public NotificationWriter NotificationWriter { get; }
+    public NotificationService Notifications { get; }
+    public NotificationEventService NotificationEvents { get; }
+    public EscalationSettingsService EscalationSettings { get; }
+    public EscalationQueryService Escalations { get; }
+    public ReminderProcessingService Reminders { get; }
 
     public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {

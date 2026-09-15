@@ -108,6 +108,8 @@ public sealed class WorkOrderSubmissionService(IApplicationDbContext db, ICurren
             ChecklistResultCount = results.Count, AttachmentCount = attachments.Count,
             PartUsageCount = parts.Count, DefectCount = defects.Count, order.LifecycleStatus
         });
+        await MaintainPro.Application.Notifications.WorkflowNotificationHooks.SubmittedAsync(
+            db, order, submission, currentUser, audit, clock, ct);
         await db.SaveChangesAsync(ct);
         var response = await GetAsync(workOrderId, submission.Id, ct);
         await transaction.CommitAsync(ct);

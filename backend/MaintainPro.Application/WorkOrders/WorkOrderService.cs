@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+using MaintainPro.Application.Notifications;
 using MaintainPro.Application.Abstractions;
 using MaintainPro.Application.Common;
 using MaintainPro.Domain.Entities;
@@ -40,15 +40,18 @@ public sealed class WorkOrderService(IApplicationDbContext db, ICurrentUser curr
         if (request.DueFrom.HasValue) query = query.Where(x => x.DueDate >= request.DueFrom);
         if (request.DueTo.HasValue) query = query.Where(x => x.DueDate <= request.DueTo);
         if (request.Overdue.HasValue)
-            query = query.Where(x => (x.DueDate < today &&
+            query = query.Where(x => (x.SubmittedAt == null && x.DueDate < today &&
                 x.LifecycleStatus != WorkOrderLifecycleStatus.APPROVED &&
                 x.LifecycleStatus != WorkOrderLifecycleStatus.CANCELLED &&
                 x.LifecycleStatus != WorkOrderLifecycleStatus.AWAITING_APPROVAL) == request.Overdue.Value);
 
         var total = await query.CountAsync(ct);
-        var items = await query.OrderBy(x => x.PlannedDate).ThenBy(x => x.WorkOrderNumber).ThenBy(x => x.Id)
+        var orders = await query.OrderBy(x => x.PlannedDate).ThenBy(x => x.WorkOrderNumber).ThenBy(x => x.Id)
             .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
-            .Select(SummaryProjection(today)).ToListAsync(ct);
+            .Include(x => x.Definition).ToListAsync(ct);
+        var settings = await EscalationSettingsService.ReadEffectiveAsync(db, ct);
+        var lastEscalations = await LastEscalationsAsync(orders.Select(x => x.Id).ToArray(), ct);
+        var items = orders.Select(x => ToSummary(x, settings, lastEscalations.GetValueOrDefault(x.Id))).ToArray();
         return new(items, request.Page, request.PageSize, total);
     }
 
@@ -59,7 +62,9 @@ public sealed class WorkOrderService(IApplicationDbContext db, ICurrentUser curr
             .SingleOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new AppException(404, "Work order not found.");
         var definition = workOrder.Definition;
-        return new(ToSummary(workOrder, Today), workOrder.StartedAt, workOrder.CompletedAt,
+        var settings = await EscalationSettingsService.ReadEffectiveAsync(db, ct);
+        var lastEscalations = await LastEscalationsAsync([id], ct);
+        return new(ToSummary(workOrder, settings, lastEscalations.GetValueOrDefault(id)), workOrder.StartedAt, workOrder.CompletedAt,
             workOrder.SubmittedAt, workOrder.ApprovedAt, workOrder.CancelledAt,
             new(definition.Id, definition.MaintenanceTypeId, definition.MaintenanceTypeName,
                 definition.ChecklistTemplateId, definition.ChecklistVersion, definition.ChecklistName,
@@ -89,17 +94,20 @@ public sealed class WorkOrderService(IApplicationDbContext db, ICurrentUser curr
         if (request.TechnicianId.HasValue) query = query.Where(x => x.AssignedTechnicianId == request.TechnicianId);
         if (request.SupervisorId.HasValue) query = query.Where(x => x.SupervisorId == request.SupervisorId);
         if (request.LifecycleStatus.HasValue) query = query.Where(x => x.LifecycleStatus == request.LifecycleStatus);
-        var events = await query.OrderBy(x => x.PlannedDate).ThenBy(x => x.WorkOrderNumber).ThenBy(x => x.Id)
-            .Take(5001).Select(x => new WorkOrderCalendarEventDto(x.Id, x.WorkOrderNumber,
-                x.Definition.PlanName, x.MachineId, x.Definition.MachineCode, x.Definition.MachineName,
-                x.AssignedTechnicianId, x.Definition.AssignedTechnicianName, x.SupervisorId,
-                x.Definition.SupervisorName, x.PlannedDate, x.DueDate, x.Priority, x.LifecycleStatus,
-                x.DueDate < today && x.LifecycleStatus != WorkOrderLifecycleStatus.APPROVED &&
-                x.LifecycleStatus != WorkOrderLifecycleStatus.CANCELLED &&
-                x.LifecycleStatus != WorkOrderLifecycleStatus.AWAITING_APPROVAL)).ToListAsync(ct);
-        if (events.Count > 5000)
+        var orders = await query.OrderBy(x => x.PlannedDate).ThenBy(x => x.WorkOrderNumber).ThenBy(x => x.Id)
+            .Take(5001).Include(x => x.Definition).ToListAsync(ct);
+        if (orders.Count > 5000)
             throw new AppException(400, "The calendar contains more than 5000 events; narrow its dates or filters.");
-        return events;
+        var settings = await EscalationSettingsService.ReadEffectiveAsync(db, ct);
+        var lastEscalations = await LastEscalationsAsync(orders.Select(x => x.Id).ToArray(), ct);
+        return orders.Select(order =>
+        {
+            var x = ToSummary(order, settings, lastEscalations.GetValueOrDefault(order.Id));
+            return new WorkOrderCalendarEventDto(x.Id, x.WorkOrderNumber, x.PlanName, x.MachineId, x.MachineCode,
+                x.MachineName, x.AssignedTechnicianId, x.AssignedTechnicianName, x.SupervisorId, x.SupervisorName,
+                x.PlannedDate, x.DueDate, x.Priority, x.LifecycleStatus, x.Overdue, x.IsDueSoon,
+                x.DaysOverdue, x.EscalationLevel, x.LastEscalatedAt, x.IsDueToday);
+        }).ToArray();
     }
 
     private IQueryable<WorkOrder> VisibleWorkOrders()
@@ -127,23 +135,19 @@ public sealed class WorkOrderService(IApplicationDbContext db, ICurrentUser curr
             throw new AppException(400, $"{name} from date cannot follow its to date.");
     }
 
-    private static Expression<Func<WorkOrder, WorkOrderSummaryDto>> SummaryProjection(DateOnly today) => x =>
-        new(x.Id, x.WorkOrderNumber, x.MachineId, x.Definition.MachineCode, x.Definition.MachineName,
-            x.MaintenancePlanId, x.Definition.PlanName, x.AssignedTechnicianId,
-            x.Definition.AssignedTechnicianName, x.SupervisorId, x.Definition.SupervisorName,
-            x.PlannedDate, x.DueDate, x.Priority, x.LifecycleStatus,
-            x.DueDate < today && x.LifecycleStatus != WorkOrderLifecycleStatus.APPROVED &&
-            x.LifecycleStatus != WorkOrderLifecycleStatus.CANCELLED &&
-            x.LifecycleStatus != WorkOrderLifecycleStatus.AWAITING_APPROVAL,
-            x.EscalationLevel, x.CreatedAt, x.UpdatedAt);
+    private async Task<Dictionary<Guid, DateTime?>> LastEscalationsAsync(Guid[] ids, CancellationToken ct) =>
+        await db.WorkOrderEscalations.AsNoTracking().Where(x => ids.Contains(x.WorkOrderId))
+            .GroupBy(x => x.WorkOrderId).Select(g => new { Id = g.Key, Last = (DateTime?)g.Max(x => x.TriggeredAt) })
+            .ToDictionaryAsync(x => x.Id, x => x.Last, ct);
 
-    private static WorkOrderSummaryDto ToSummary(WorkOrder x, DateOnly today) =>
-        new(x.Id, x.WorkOrderNumber, x.MachineId, x.Definition.MachineCode, x.Definition.MachineName,
+    private WorkOrderSummaryDto ToSummary(WorkOrder x, EscalationSettings settings, DateTime? lastEscalatedAt)
+    {
+        var timing = new WorkOrderTimingService().Evaluate(x, settings, clock.GetUtcNow().UtcDateTime);
+        return new(x.Id, x.WorkOrderNumber, x.MachineId, x.Definition.MachineCode, x.Definition.MachineName,
             x.MaintenancePlanId, x.Definition.PlanName, x.AssignedTechnicianId,
-            x.Definition.AssignedTechnicianName, x.SupervisorId, x.Definition.SupervisorName,
+            x.CurrentTechnicianName ?? x.Definition.AssignedTechnicianName, x.SupervisorId, x.Definition.SupervisorName,
             x.PlannedDate, x.DueDate, x.Priority, x.LifecycleStatus,
-            x.DueDate < today && x.LifecycleStatus != WorkOrderLifecycleStatus.APPROVED &&
-            x.LifecycleStatus != WorkOrderLifecycleStatus.CANCELLED &&
-            x.LifecycleStatus != WorkOrderLifecycleStatus.AWAITING_APPROVAL,
-            x.EscalationLevel, x.CreatedAt, x.UpdatedAt);
+            timing.IsOverdue, timing.EscalationLevel, x.CreatedAt, x.UpdatedAt,
+            timing.IsDueSoon, timing.DaysOverdue, lastEscalatedAt, timing.IsDueToday);
+    }
 }

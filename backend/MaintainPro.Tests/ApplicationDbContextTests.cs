@@ -40,7 +40,12 @@ public class ApplicationDbContextTests
             nameof(WorkOrderSubmissionPartUsage),
             nameof(WorkOrderSubmissionDefect),
             nameof(WorkOrderApproval),
-            nameof(WorkOrderHistoryEvent)
+            nameof(WorkOrderHistoryEvent),
+            nameof(Notification),
+            nameof(NotificationDeliveryAttempt),
+            nameof(WorkOrderEscalation),
+            nameof(EscalationSettings),
+            nameof(NotificationEvent)
         }.Order(StringComparer.Ordinal),
             entities.Select(entity => entity.ClrType.Name).Order(StringComparer.Ordinal));
 
@@ -128,7 +133,14 @@ public class ApplicationDbContextTests
             "WorkOrderApproval.Supervisor: SupervisorId -> User; required=True",
             "WorkOrderHistoryEvent.WorkOrder: WorkOrderId -> WorkOrder; required=True",
             "WorkOrderHistoryEvent.ActorUser: ActorUserId -> User; required=False",
-            "WorkOrderHistoryEvent.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=False"
+            "WorkOrderHistoryEvent.Submission: WorkOrderSubmissionId -> WorkOrderSubmission; required=False",
+            "Notification.User: UserId -> User; required=True",
+            "NotificationDeliveryAttempt.Notification: NotificationId -> Notification; required=True",
+            "WorkOrderEscalation.WorkOrder: WorkOrderId -> WorkOrder; required=True",
+            "WorkOrderEscalation.RecipientUser: RecipientUserId -> User; required=True",
+            "WorkOrderEscalation.Notification: NotificationId -> Notification; required=True",
+            "EscalationSettings.UpdatedByUser: UpdatedByUserId -> User; required=False",
+            "NotificationEvent.WorkOrder: WorkOrderId -> WorkOrder; required=True"
         }.Order(StringComparer.Ordinal), relationships);
     }
 
@@ -167,7 +179,10 @@ public class ApplicationDbContextTests
             "FileRecord.StorageKey", "WorkOrderSubmission.WorkOrderId,VersionNumber",
             "WorkOrderSubmissionChecklistResult.WorkOrderSubmissionId,WorkOrderChecklistItemId",
             "WorkOrderSubmissionAttachment.WorkOrderSubmissionId,FileId",
-            "WorkOrderApproval.WorkOrderSubmissionId", "WorkOrderHistoryEvent.WorkOrderId,SequenceNumber"
+            "WorkOrderApproval.WorkOrderSubmissionId", "WorkOrderHistoryEvent.WorkOrderId,SequenceNumber",
+            "Notification.DeduplicationKey", "NotificationDeliveryAttempt.NotificationId,Channel,AttemptNumber",
+            "WorkOrderEscalation.DeduplicationKey", "WorkOrderEscalation.NotificationId",
+            "NotificationEvent.DeduplicationKey"
         }.Order(StringComparer.Ordinal), uniqueIndexes);
     }
 
@@ -272,12 +287,12 @@ public class ApplicationDbContextTests
         var enumProperties = properties
             .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum).ToArray();
 
-        Assert.Equal(43, timestampProperties.Length);
+        Assert.Equal(52, timestampProperties.Length);
         Assert.All(timestampProperties,
             property => Assert.Equal("timestamp with time zone", property.GetColumnType()));
         Assert.Equal(7, dateProperties.Length);
         Assert.All(dateProperties, property => Assert.Equal("date", property.GetColumnType()));
-        Assert.Equal(14, enumProperties.Length);
+        Assert.Equal(21, enumProperties.Length);
         Assert.All(enumProperties,
             property => Assert.Equal(typeof(string), property.GetTypeMapping().Converter!.ProviderClrType));
     }

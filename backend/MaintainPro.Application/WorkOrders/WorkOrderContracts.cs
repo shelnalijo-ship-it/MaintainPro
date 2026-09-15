@@ -10,7 +10,7 @@ public sealed record GenerationRequest
 
 public sealed record GenerationIssue(Guid MaintenancePlanId, string Message);
 public sealed record GenerationSummary(int PlansEvaluated, int WorkOrdersCreated, int Skipped,
-    int Errors, bool HasMore, IReadOnlyList<GenerationIssue> Issues);
+    int Errors, bool HasMore, IReadOnlyList<GenerationIssue> Issues, int NotificationsCreated = 0);
 
 public sealed record WorkOrderQuery(string? Search = null, int Page = 1, int PageSize = 20,
     Guid? MachineId = null, Guid? MaintenancePlanId = null, Guid? TechnicianId = null,
@@ -26,7 +26,11 @@ public sealed record WorkOrderSummaryDto(Guid Id, string WorkOrderNumber, Guid M
     Guid? AssignedTechnicianId, string? AssignedTechnicianName, Guid SupervisorId,
     string SupervisorName, DateOnly PlannedDate, DateOnly DueDate, MaintenancePriority Priority,
     WorkOrderLifecycleStatus LifecycleStatus, bool Overdue, int EscalationLevel,
-    DateTime CreatedAt, DateTime UpdatedAt);
+    DateTime CreatedAt, DateTime UpdatedAt, bool IsDueSoon = false, int DaysOverdue = 0,
+    DateTime? LastEscalatedAt = null, bool IsDueToday = false)
+{
+    public bool IsOverdue => Overdue;
+}
 
 public sealed record WorkOrderDto(WorkOrderSummaryDto WorkOrder, DateTime? StartedAt,
     DateTime? CompletedAt, DateTime? SubmittedAt, DateTime? ApprovedAt, DateTime? CancelledAt,
@@ -47,4 +51,8 @@ public sealed record WorkOrderCalendarEventDto(Guid Id, string WorkOrderNumber, 
     Guid MachineId, string MachineCode, string MachineName, Guid? AssignedTechnicianId,
     string? AssignedTechnicianName, Guid SupervisorId, string SupervisorName,
     DateOnly PlannedDate, DateOnly DueDate, MaintenancePriority Priority,
-    WorkOrderLifecycleStatus LifecycleStatus, bool Overdue);
+    WorkOrderLifecycleStatus LifecycleStatus, bool Overdue, bool IsDueSoon = false,
+    int DaysOverdue = 0, int EscalationLevel = 0, DateTime? LastEscalatedAt = null, bool IsDueToday = false)
+{
+    public bool IsOverdue => Overdue;
+}

@@ -111,6 +111,8 @@ public sealed class WorkOrderReviewService(IApplicationDbContext db, ICurrentUse
             ReviewId = review.Id, SubmissionId = submission.Id, submission.VersionNumber,
             review.SupervisorId, review.Decision, review.DecisionAt, review.Remarks, order.LifecycleStatus
         });
+        await MaintainPro.Application.Notifications.WorkflowNotificationHooks.ReviewedAsync(
+            db, order, submission, review, currentUser, audit, clock, ct);
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         return ReviewMapping.ToDto(review);

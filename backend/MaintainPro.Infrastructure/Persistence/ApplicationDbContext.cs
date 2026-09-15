@@ -15,6 +15,11 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     }
 
     public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts => Set<NotificationDeliveryAttempt>();
+    public DbSet<WorkOrderEscalation> WorkOrderEscalations => Set<WorkOrderEscalation>();
+    public DbSet<EscalationSettings> EscalationSettings => Set<EscalationSettings>();
+    public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
     public DbSet<WorkOrderExecution> WorkOrderExecutions => Set<WorkOrderExecution>();
     public DbSet<WorkOrderChecklistResult> WorkOrderChecklistResults => Set<WorkOrderChecklistResult>();
     public DbSet<SparePartUsage> SparePartUsages => Set<SparePartUsage>();
@@ -68,6 +73,7 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         foreach (var entry in ChangeTracker.Entries())
         {
             ProtectExecutionHistory(entry);
+            ProtectNotificationHistory(entry);
             if (entry.State == EntityState.Added)
             {
                 if (entry.Entity is WorkOrder newOrder && !ChangeTracker.Entries<WorkOrderDefinition>()
@@ -96,11 +102,41 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (entry.Entity is User user) { user.UpdatedAt = DateTime.UtcNow; user.Version = Guid.NewGuid(); }
             if (entry.Entity is Machine machine) { machine.UpdatedAt = DateTime.UtcNow; machine.Version = Guid.NewGuid(); }
             if (entry.Entity is RefreshToken token) token.Version = Guid.NewGuid();
+            if (entry.Entity is Notification notification) notification.Version = Guid.NewGuid();
+            if (entry.Entity is NotificationEvent notificationEvent) notificationEvent.Version = Guid.NewGuid();
+            if (entry.Entity is WorkOrderEscalation escalation) escalation.Version = Guid.NewGuid();
+            if (entry.Entity is EscalationSettings settings) settings.Version = Guid.NewGuid();
             if (entry.Entity is MaintenanceType type) { type.UpdatedAt = DateTime.UtcNow; type.Version = Guid.NewGuid(); }
             if (entry.Entity is MaintenancePlan plan) { plan.UpdatedAt = DateTime.UtcNow; plan.Version = Guid.NewGuid(); }
             if (entry.Entity is WorkOrder workOrder) { workOrder.UpdatedAt = DateTime.UtcNow; workOrder.Version = Guid.NewGuid(); }
             if (entry.Entity is WorkOrderNumberSequence sequence) sequence.Version = Guid.NewGuid();
         }
+    }
+
+    private static void ProtectNotificationHistory(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        if (entry.Entity is not (Notification or NotificationEvent or NotificationDeliveryAttempt or WorkOrderEscalation or MaintainPro.Domain.Entities.EscalationSettings))
+            return;
+        if (entry.State == EntityState.Deleted)
+            throw new InvalidOperationException("Notification and escalation records must be retained.");
+        if (entry.State != EntityState.Modified || entry.Entity is MaintainPro.Domain.Entities.EscalationSettings) return;
+        var allowed = entry.Entity switch
+        {
+            Notification => new[] { "ReadAt", "IsRead", "Version" },
+            NotificationEvent => new[] { "ProcessedAt", "LastError", "Version" },
+            WorkOrderEscalation => new[] { "ResolvedAt", "Version" },
+            _ => Array.Empty<string>()
+        };
+        if (entry.Properties.Any(p => p.IsModified && !allowed.Contains(p.Metadata.Name)))
+            throw new InvalidOperationException("Notification payloads, delivery attempts and escalation facts are immutable.");
+        if (entry.Entity is Notification && entry.OriginalValues.GetValue<DateTime?>("ReadAt").HasValue
+            && entry.Property("ReadAt").IsModified)
+            throw new InvalidOperationException("A notification's first read time must be preserved.");
+        if (entry.Entity is WorkOrderEscalation && entry.OriginalValues.GetValue<DateTime?>("ResolvedAt").HasValue
+            && entry.Property("ResolvedAt").IsModified)
+            throw new InvalidOperationException("Resolved escalation history cannot be reopened or rewritten.");
+        if (entry.Entity is NotificationEvent && entry.OriginalValues.GetValue<DateTime?>("ProcessedAt").HasValue)
+            throw new InvalidOperationException("Processed notification events are immutable.");
     }
 
     private void ProtectExecutionHistory(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
