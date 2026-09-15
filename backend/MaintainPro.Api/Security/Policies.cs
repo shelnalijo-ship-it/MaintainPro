@@ -21,6 +21,9 @@ public static class Policies
     public const string ManageBreakdowns = nameof(ManageBreakdowns);
     public const string ReadCalibrations = nameof(ReadCalibrations);
     public const string ManageCalibrations = nameof(ManageCalibrations);
+    public const string ReadExternalServices = nameof(ReadExternalServices);
+    public const string ManageExternalServiceFollowUps = nameof(ManageExternalServiceFollowUps);
+    public const string ManageMachineDocuments = nameof(ManageMachineDocuments);
 
     public static void AddPolicies(IServiceCollection services)
     {
@@ -45,6 +48,11 @@ public static class Policies
             options.AddPolicy(ManageBreakdowns, policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
             options.AddPolicy(ReadCalibrations, policy => policy.RequireRole(RoleNames.All.ToArray()));
             options.AddPolicy(ManageCalibrations, policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ReadExternalServices, policy => policy.RequireRole(RoleNames.All.ToArray()));
+            options.AddPolicy(ManageExternalServiceFollowUps,
+                policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ManageMachineDocuments,
+                policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
         });
     }
 }

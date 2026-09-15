@@ -13,6 +13,7 @@ using MaintainPro.Application.Reviews;
 using MaintainPro.Application.Notifications;
 using MaintainPro.Application.Breakdowns;
 using MaintainPro.Application.Calibrations;
+using MaintainPro.Application.ExternalServices;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
@@ -79,6 +80,11 @@ internal sealed class ModuleFixture : IAsyncDisposable
         CalibrationRenewals = new CalibrationRenewalService(db, Actor, Audit, Clock);
         CalibrationReminders = new CalibrationReminderProcessor(db, Actor, Audit, Clock,
             new SqliteGenerationConcurrency(db));
+        ExternalNumbers = new ExternalServiceNumberAllocator(db);
+        ExternalServices = new ExternalServiceService(db, Actor, Audit, Clock, ExternalNumbers,
+            new SqliteGenerationConcurrency(db));
+        ExternalServiceAttachments = new ExternalServiceAttachmentService(db, Actor, Audit, Clock, FileStorage);
+        MachineDocuments = new MachineDocumentService(db, Actor, Audit, Clock, FileStorage);
     }
 
     public ApplicationDbContext Db { get; }
@@ -126,6 +132,10 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public CalibrationService Calibrations { get; }
     public CalibrationRenewalService CalibrationRenewals { get; }
     public CalibrationReminderProcessor CalibrationReminders { get; }
+    public ExternalServiceNumberAllocator ExternalNumbers { get; }
+    public ExternalServiceService ExternalServices { get; }
+    public ExternalServiceAttachmentService ExternalServiceAttachments { get; }
+    public MachineDocumentService MachineDocuments { get; }
 
     public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {

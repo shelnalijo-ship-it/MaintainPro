@@ -15,6 +15,7 @@ using MaintainPro.Application.Execution;
 using MaintainPro.Application.Reviews;
 using MaintainPro.Application.Breakdowns;
 using MaintainPro.Application.Calibrations;
+using MaintainPro.Application.ExternalServices;
 using MaintainPro.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -86,6 +87,10 @@ public static class DependencyInjection
         services.AddScoped<CalibrationService>();
         services.AddScoped<CalibrationRenewalService>();
         services.AddScoped<CalibrationReminderProcessor>();
+        services.AddScoped<ExternalServiceNumberAllocator>();
+        services.AddScoped<ExternalServiceService>();
+        services.AddScoped<ExternalServiceAttachmentService>();
+        services.AddScoped<MachineDocumentService>();
 
         return services;
     }

@@ -9,6 +9,10 @@ namespace MaintainPro.Infrastructure.Persistence;
 
 public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 {
+    public DbSet<ExternalService> ExternalServices => Set<ExternalService>();
+    public DbSet<ExternalServiceNumberSequence> ExternalServiceNumberSequences => Set<ExternalServiceNumberSequence>();
+    public DbSet<ExternalServiceAttachment> ExternalServiceAttachments => Set<ExternalServiceAttachment>();
+    public DbSet<MachineDocument> MachineDocuments => Set<MachineDocument>();
     public DbSet<CalibrationCertificate> CalibrationCertificates => Set<CalibrationCertificate>();
     public DbSet<CalibrationRenewal> CalibrationRenewals => Set<CalibrationRenewal>();
     public DbSet<CalibrationNotificationEvent> CalibrationNotificationEvents => Set<CalibrationNotificationEvent>();
@@ -91,6 +95,7 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             ProtectNotificationHistory(entry);
             ProtectBreakdownHistory(entry);
             ProtectCalibrationHistory(entry);
+            ProtectExternalServiceHistory(entry);
             if (entry.State == EntityState.Added)
             {
                 if (entry.Entity is WorkOrder newOrder && !ChangeTracker.Entries<WorkOrderDefinition>()
@@ -139,6 +144,38 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (entry.Entity is BreakdownNotificationEvent breakdownEvent) breakdownEvent.Version = Guid.NewGuid();
             if (entry.Entity is CalibrationRenewal renewal) { renewal.UpdatedAt = DateTime.UtcNow; renewal.Version = Guid.NewGuid(); }
             if (entry.Entity is CalibrationNotificationEvent calibrationEvent) calibrationEvent.Version = Guid.NewGuid();
+            if (entry.Entity is ExternalService service) { service.UpdatedAt = DateTime.UtcNow; service.Version = Guid.NewGuid(); }
+            if (entry.Entity is ExternalServiceNumberSequence externalSequence) externalSequence.Version = Guid.NewGuid();
+            if (entry.Entity is ExternalServiceAttachment externalAttachment) externalAttachment.Version = Guid.NewGuid();
+            if (entry.Entity is MachineDocument document) { document.UpdatedAt = DateTime.UtcNow; document.Version = Guid.NewGuid(); }
+        }
+    }
+
+    private static void ProtectExternalServiceHistory(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        if (entry.Entity is not (ExternalService or ExternalServiceNumberSequence or ExternalServiceAttachment or MachineDocument))
+            return;
+        if (entry.State == EntityState.Deleted)
+            throw new InvalidOperationException("External services, attachments, number sequences and machine documents must be retained.");
+        if (entry.State != EntityState.Modified) return;
+        if (entry.Entity is ExternalService)
+        {
+            var immutable = new[] { "ServiceNumber", "MachineId", "MachineCode", "MachineName", "CreatedByUserId", "CreatedAt" };
+            if (entry.Properties.Any(x => x.IsModified && immutable.Contains(x.Metadata.Name)))
+                throw new InvalidOperationException("External-service identity, machine snapshot and creation facts are immutable.");
+        }
+        if (entry.Entity is ExternalServiceAttachment)
+        {
+            var allowed = new[] { "IsActive", "Version" };
+            if (entry.Properties.Any(x => x.IsModified && !allowed.Contains(x.Metadata.Name)) ||
+                !entry.OriginalValues.GetValue<bool>("IsActive") || entry.CurrentValues.GetValue<bool>("IsActive"))
+                throw new InvalidOperationException("External-service attachments are immutable and may only be deactivated once.");
+        }
+        if (entry.Entity is MachineDocument)
+        {
+            var immutable = new[] { "MachineId", "FileId", "UploadedByUserId", "UploadedAt" };
+            if (entry.Properties.Any(x => x.IsModified && immutable.Contains(x.Metadata.Name)))
+                throw new InvalidOperationException("Machine-document file identity and upload provenance are immutable.");
         }
     }
 

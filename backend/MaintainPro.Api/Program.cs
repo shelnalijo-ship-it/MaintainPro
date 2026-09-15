@@ -116,6 +116,7 @@ app.MapExecutionEndpoints();
 app.MapNotificationEndpoints();
 app.MapBreakdownEndpoints();
 app.MapCalibrationEndpoints();
+app.MapExternalServiceEndpoints();
 
 app.Run();
 

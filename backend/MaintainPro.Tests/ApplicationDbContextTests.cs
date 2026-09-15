@@ -50,7 +50,8 @@ public class ApplicationDbContextTests
             nameof(CorrectiveActionDraft), nameof(CorrectivePartUsage), nameof(BreakdownAttachment),
             nameof(CorrectiveSubmission), nameof(CorrectiveSubmissionPartUsage), nameof(CorrectiveSubmissionAttachment),
             nameof(CorrectiveApproval), nameof(CalibrationCertificate), nameof(CalibrationRenewal),
-            nameof(CalibrationNotificationEvent)
+            nameof(CalibrationNotificationEvent), nameof(ExternalService), nameof(ExternalServiceNumberSequence),
+            nameof(ExternalServiceAttachment), nameof(MachineDocument)
         }.Order(StringComparer.Ordinal),
             entities.Select(entity => entity.ClrType.Name).Order(StringComparer.Ordinal));
 
@@ -184,7 +185,15 @@ public class ApplicationDbContextTests
             "CalibrationRenewal.StartedByUser: StartedByUserId -> User; required=True",
             "CalibrationNotificationEvent.Machine: MachineId -> Machine; required=True",
             "CalibrationNotificationEvent.Certificate: CalibrationCertificateId -> CalibrationCertificate; required=False",
-            "CalibrationNotificationEvent.Renewal: CalibrationRenewalId -> CalibrationRenewal; required=False"
+            "CalibrationNotificationEvent.Renewal: CalibrationRenewalId -> CalibrationRenewal; required=False",
+            "ExternalService.Machine: MachineId -> Machine; required=True",
+            "ExternalService.CreatedByUser: CreatedByUserId -> User; required=True",
+            "ExternalServiceAttachment.ExternalService: ExternalServiceId -> ExternalService; required=True",
+            "ExternalServiceAttachment.File: FileId -> FileRecord; required=True",
+            "ExternalServiceAttachment.UploadedByUser: UploadedByUserId -> User; required=True",
+            "MachineDocument.Machine: MachineId -> Machine; required=True",
+            "MachineDocument.File: FileId -> FileRecord; required=True",
+            "MachineDocument.UploadedByUser: UploadedByUserId -> User; required=True"
         }.Order(StringComparer.Ordinal), relationships);
     }
 
@@ -232,7 +241,8 @@ public class ApplicationDbContextTests
             "BreakdownAttachment.BreakdownId,FileId", "CorrectiveSubmission.BreakdownId,VersionNumber",
             "CorrectiveSubmissionAttachment.CorrectiveSubmissionId,FileId", "CorrectiveApproval.CorrectiveSubmissionId",
             "CalibrationCertificate.CalibrationProvider,CertificateNumber", "CalibrationRenewal.MachineId",
-            "CalibrationNotificationEvent.DeduplicationKey"
+            "CalibrationNotificationEvent.DeduplicationKey", "ExternalService.ServiceNumber",
+            "ExternalServiceAttachment.ExternalServiceId,FileId", "MachineDocument.MachineId,FileId"
         }.Order(StringComparer.Ordinal), uniqueIndexes);
     }
 
@@ -261,7 +271,9 @@ public class ApplicationDbContextTests
 
         foreach (var type in new[] { typeof(User), typeof(Machine), typeof(RefreshToken),
             typeof(MaintenanceType), typeof(MaintenancePlan), typeof(WorkOrder), typeof(WorkOrderNumberSequence),
-            typeof(Breakdown), typeof(BreakdownNumberSequence), typeof(BreakdownNotificationEvent) })
+            typeof(Breakdown), typeof(BreakdownNumberSequence), typeof(BreakdownNotificationEvent),
+            typeof(ExternalService), typeof(ExternalServiceNumberSequence), typeof(ExternalServiceAttachment),
+            typeof(MachineDocument) })
         {
             var entity = context.Model.FindEntityType(type)!;
             Assert.Contains(entity.GetProperties(), property => property.IsConcurrencyToken);
@@ -279,6 +291,9 @@ public class ApplicationDbContextTests
         var counter = context.Model.FindEntityType(typeof(WorkOrderNumberSequence))!;
         Assert.Equal(new[] { "Year" }, counter.FindPrimaryKey()!.Properties.Select(property => property.Name));
         Assert.Equal(typeof(long), counter.FindProperty("LastValue")!.ClrType);
+        var externalCounter = context.Model.FindEntityType(typeof(ExternalServiceNumberSequence))!;
+        Assert.Equal(new[] { "Year" }, externalCounter.FindPrimaryKey()!.Properties.Select(property => property.Name));
+        Assert.Equal(typeof(long), externalCounter.FindProperty("LastValue")!.ClrType);
         Assert.DoesNotContain("OVERDUE", Enum.GetNames<WorkOrderLifecycleStatus>());
         Assert.DoesNotContain("ESCALATED", Enum.GetNames<WorkOrderLifecycleStatus>());
     }
@@ -338,12 +353,12 @@ public class ApplicationDbContextTests
         var enumProperties = properties
             .Where(property => (Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum).ToArray();
 
-        Assert.Equal(84, timestampProperties.Length);
+        Assert.Equal(89, timestampProperties.Length);
         Assert.All(timestampProperties,
             property => Assert.Equal("timestamp with time zone", property.GetColumnType()));
-        Assert.Equal(9, dateProperties.Length);
+        Assert.Equal(14, dateProperties.Length);
         Assert.All(dateProperties, property => Assert.Equal("date", property.GetColumnType()));
-        Assert.Equal(34, enumProperties.Length);
+        Assert.Equal(37, enumProperties.Length);
         Assert.All(enumProperties,
             property => Assert.Equal(typeof(string), property.GetTypeMapping().Converter!.ProviderClrType));
     }

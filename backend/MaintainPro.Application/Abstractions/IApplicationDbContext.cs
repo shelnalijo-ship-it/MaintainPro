@@ -5,6 +5,10 @@ namespace MaintainPro.Application.Abstractions;
 
 public interface IApplicationDbContext
 {
+    DbSet<ExternalService> ExternalServices { get; }
+    DbSet<ExternalServiceNumberSequence> ExternalServiceNumberSequences { get; }
+    DbSet<ExternalServiceAttachment> ExternalServiceAttachments { get; }
+    DbSet<MachineDocument> MachineDocuments { get; }
     DbSet<CalibrationCertificate> CalibrationCertificates { get; }
     DbSet<CalibrationRenewal> CalibrationRenewals { get; }
     DbSet<CalibrationNotificationEvent> CalibrationNotificationEvents { get; }

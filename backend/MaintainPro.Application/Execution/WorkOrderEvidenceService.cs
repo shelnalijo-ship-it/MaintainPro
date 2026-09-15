@@ -1,6 +1,7 @@
 using MaintainPro.Application.Abstractions;
 using MaintainPro.Application.Breakdowns;
 using MaintainPro.Application.Calibrations;
+using MaintainPro.Application.ExternalServices;
 using MaintainPro.Application.Common;
 using MaintainPro.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -69,6 +70,8 @@ public sealed class WorkOrderEvidenceService(IApplicationDbContext db, ICurrentU
         var visible = ExecutionAccess.VisibleWorkOrders(db, currentUser);
         var visibleBreakdowns = BreakdownAccess.Visible(db, currentUser);
         var visibleCalibrationMachines = CalibrationAccess.VisibleMachines(db, currentUser);
+        var visibleExternalServices = ExternalServiceAccess.VisibleServices(db, currentUser);
+        var visibleDocumentMachines = ExternalServiceAccess.VisibleMachines(db, currentUser);
         var file = await db.FileRecords.AsNoTracking().Where(file => file.Id == fileId &&
             (db.WorkOrderAttachments.Any(attachment => attachment.FileId == file.Id && !attachment.IsDeleted &&
                 visible.Any(order => order.Id == attachment.WorkOrderId)) ||
@@ -79,7 +82,11 @@ public sealed class WorkOrderEvidenceService(IApplicationDbContext db, ICurrentU
              db.CorrectiveSubmissionAttachments.Any(attachment => attachment.FileId == file.Id &&
                 visibleBreakdowns.Any(breakdown => breakdown.Id == attachment.Submission.BreakdownId)) ||
              db.CalibrationCertificates.Any(certificate => certificate.CertificateFileId == file.Id &&
-                visibleCalibrationMachines.Any(machine => machine.Id == certificate.MachineId))))
+                visibleCalibrationMachines.Any(machine => machine.Id == certificate.MachineId)) ||
+             db.ExternalServiceAttachments.Any(attachment => attachment.FileId == file.Id &&
+                visibleExternalServices.Any(service => service.Id == attachment.ExternalServiceId)) ||
+             db.MachineDocuments.Any(document => document.FileId == file.Id &&
+                visibleDocumentMachines.Any(machine => machine.Id == document.MachineId))))
             .SingleOrDefaultAsync(ct) ?? throw new AppException(404, "File not found.");
         try
         {
