@@ -14,6 +14,7 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(log => log.EntityType).IsRequired();
         builder.Property(log => log.CreatedAt).HasColumnType("timestamp with time zone");
         builder.HasIndex(log => log.CreatedAt);
+        builder.HasIndex(log => new { log.EntityType, log.EntityId, log.CreatedAt });
         builder.HasOne(log => log.User).WithMany().HasForeignKey(log => log.UserId)
             .OnDelete(DeleteBehavior.Restrict);
     }

@@ -12,6 +12,7 @@ public sealed class MachineAssignmentHistoryConfiguration : IEntityTypeConfigura
         builder.HasKey(history => history.Id);
         builder.HasIndex(history => history.MachineId).IsUnique()
             .HasFilter("\"EffectiveTo\" IS NULL");
+        builder.HasIndex(history => new { history.MachineId, history.EffectiveFrom });
         builder.Property(history => history.EffectiveFrom).HasColumnType("timestamp with time zone");
         builder.Property(history => history.EffectiveTo).HasColumnType("timestamp with time zone");
 

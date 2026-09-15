@@ -16,6 +16,8 @@ using MaintainPro.Application.Reviews;
 using MaintainPro.Application.Breakdowns;
 using MaintainPro.Application.Calibrations;
 using MaintainPro.Application.ExternalServices;
+using MaintainPro.Application.Reporting;
+using MaintainPro.Infrastructure.Reporting;
 using MaintainPro.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +93,14 @@ public static class DependencyInjection
         services.AddScoped<ExternalServiceService>();
         services.AddScoped<ExternalServiceAttachmentService>();
         services.AddScoped<MachineDocumentService>();
+        services.AddScoped<ReportQueryService>();
+        services.AddScoped<DashboardService>();
+        services.AddScoped<MachineHistoryReportService>();
+        services.AddScoped<SummaryReportingService>();
+        services.AddScoped<ReportExportCoordinator>();
+        services.AddScoped<ReportExportHistoryService>();
+        services.Configure<ReportingOptions>(configuration.GetSection(ReportingOptions.SectionName));
+        services.AddSingleton<IReportExportService, ReportExportService>();
 
         return services;
     }

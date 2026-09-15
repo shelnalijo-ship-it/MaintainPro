@@ -33,6 +33,7 @@ public sealed class ExternalServiceConfiguration : IEntityTypeConfiguration<Exte
         b.Property(x => x.Version).IsConcurrencyToken();
         b.HasIndex(x => x.ServiceNumber).IsUnique();
         b.HasIndex(x => new { x.MachineId, x.ServiceDate });
+        b.HasIndex(x => x.ServiceDate);
         b.HasIndex(x => x.ServiceCompany);
         b.HasIndex(x => x.FollowUpDate);
         b.HasIndex(x => x.NextServiceDate);

@@ -15,6 +15,7 @@ public sealed class WorkOrderConfiguration : IEntityTypeConfiguration<WorkOrder>
         builder.HasIndex(x => x.WorkOrderNumber).IsUnique();
         builder.HasIndex(x => new { x.MaintenancePlanId, x.PlannedDate }).IsUnique().HasFilter("\"MaintenancePlanId\" IS NOT NULL");
         builder.HasIndex(x => new { x.LifecycleStatus, x.DueDate });
+        builder.HasIndex(x => x.DueDate);
         builder.HasIndex(x => new { x.SupervisorId, x.LifecycleStatus, x.SubmittedAt });
         builder.HasIndex(x => x.SupervisorId);
         builder.ToTable(t => t.HasCheckConstraint("CK_WorkOrders_AssignmentVersion", "\"AssignmentVersion\" >= 0"));

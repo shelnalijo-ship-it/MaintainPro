@@ -14,11 +14,13 @@ using MaintainPro.Application.Notifications;
 using MaintainPro.Application.Breakdowns;
 using MaintainPro.Application.Calibrations;
 using MaintainPro.Application.ExternalServices;
+using MaintainPro.Application.Reporting;
 using MaintainPro.Domain.Entities;
 using MaintainPro.Infrastructure.Identity;
 using MaintainPro.Infrastructure.Persistence;
 using MaintainPro.Infrastructure.Planning;
 using MaintainPro.Infrastructure.Files;
+using MaintainPro.Infrastructure.Reporting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +87,14 @@ internal sealed class ModuleFixture : IAsyncDisposable
             new SqliteGenerationConcurrency(db));
         ExternalServiceAttachments = new ExternalServiceAttachmentService(db, Actor, Audit, Clock, FileStorage);
         MachineDocuments = new MachineDocumentService(db, Actor, Audit, Clock, FileStorage);
+        ReportQueries = new ReportQueryService(db, Actor, Clock);
+        MachineHistoryReports = new MachineHistoryReportService(db, Actor);
+        SummaryReports = new SummaryReportingService(db, Actor, Clock, ReportQueries);
+        Dashboards = new DashboardService(db, Actor, Clock, ReportQueries);
+        ReportExporter = new ReportExportService(Options.Create(new ReportingOptions()));
+        ReportExports = new ReportExportCoordinator(db, Actor, Audit, Clock, ReportExporter,
+            ReportQueries, SummaryReports, MachineHistoryReports);
+        ReportExportHistory = new ReportExportHistoryService(db, Actor);
     }
 
     public ApplicationDbContext Db { get; }
@@ -136,6 +146,13 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public ExternalServiceService ExternalServices { get; }
     public ExternalServiceAttachmentService ExternalServiceAttachments { get; }
     public MachineDocumentService MachineDocuments { get; }
+    public ReportQueryService ReportQueries { get; }
+    public MachineHistoryReportService MachineHistoryReports { get; }
+    public SummaryReportingService SummaryReports { get; }
+    public DashboardService Dashboards { get; }
+    public ReportExportService ReportExporter { get; }
+    public ReportExportCoordinator ReportExports { get; }
+    public ReportExportHistoryService ReportExportHistory { get; }
 
     public static async Task<ModuleFixture> CreateAsync(bool seedRoles = true, string? sqliteDatabasePath = null)
     {

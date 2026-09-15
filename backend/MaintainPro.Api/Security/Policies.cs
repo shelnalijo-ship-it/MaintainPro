@@ -24,6 +24,11 @@ public static class Policies
     public const string ReadExternalServices = nameof(ReadExternalServices);
     public const string ManageExternalServiceFollowUps = nameof(ManageExternalServiceFollowUps);
     public const string ManageMachineDocuments = nameof(ManageMachineDocuments);
+    public const string ViewManagerDashboard = nameof(ViewManagerDashboard);
+    public const string ViewSupervisorDashboard = nameof(ViewSupervisorDashboard);
+    public const string ViewTechnicianDashboard = nameof(ViewTechnicianDashboard);
+    public const string ViewReports = nameof(ViewReports);
+    public const string ViewMachineHistoryReports = nameof(ViewMachineHistoryReports);
 
     public static void AddPolicies(IServiceCollection services)
     {
@@ -53,6 +58,16 @@ public static class Policies
                 policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
             options.AddPolicy(ManageMachineDocuments,
                 policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ViewManagerDashboard,
+                policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ViewSupervisorDashboard,
+                policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ViewTechnicianDashboard,
+                policy => policy.RequireRole(RoleNames.Technician));
+            options.AddPolicy(ViewReports,
+                policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
+            options.AddPolicy(ViewMachineHistoryReports,
+                policy => policy.RequireRole(RoleNames.All.ToArray()));
         });
     }
 }

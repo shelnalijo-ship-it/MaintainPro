@@ -34,6 +34,7 @@ public sealed class BreakdownConfiguration : IEntityTypeConfiguration<Breakdown>
         b.HasIndex(x => x.BreakdownNumber).IsUnique();
         b.HasIndex(x => new { x.MachineId, x.MachineStopped, x.ReturnedToServiceAt });
         b.HasIndex(x => new { x.Status, x.ReportedAt });
+        b.HasIndex(x => x.ReportedAt);
         b.HasIndex(x => new { x.AssignedTechnicianId, x.Status });
         b.HasIndex(x => new { x.SupervisorId, x.Status });
         b.ToTable(t => t.HasCheckConstraint("CK_Breakdowns_Versions", "\"AssignmentVersion\" >= 0 AND \"SubmissionVersion\" >= 0 AND \"HistoryVersion\" >= 0"));
@@ -44,4 +45,3 @@ public sealed class BreakdownConfiguration : IEntityTypeConfiguration<Breakdown>
         b.HasOne(x => x.Supervisor).WithMany().HasForeignKey(x => x.SupervisorId).OnDelete(DeleteBehavior.Restrict);
     }
 }
-

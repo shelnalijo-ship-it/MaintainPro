@@ -22,6 +22,8 @@ public sealed class MachineConfiguration : IEntityTypeConfiguration<Machine>
         builder.Property(machine => machine.CreatedAt).HasColumnType("timestamp with time zone");
         builder.Property(machine => machine.UpdatedAt).HasColumnType("timestamp with time zone");
         builder.HasIndex(machine => machine.MachineCode).IsUnique();
+        builder.HasIndex(machine => machine.DepartmentId);
+        builder.HasIndex(machine => new { machine.DepartmentId, machine.LocationId, machine.Status });
 
         builder.HasOne(machine => machine.MachineOwner)
             .WithMany()
