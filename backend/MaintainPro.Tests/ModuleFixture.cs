@@ -47,6 +47,7 @@ internal sealed class ModuleFixture : IAsyncDisposable
         Passwords = new PasswordService(new PasswordHasher<User>());
         Tokens = new TokenService(Options.Create(JwtSettings), Clock);
         Audit = new AuditWriter(db, Actor, Clock);
+        AuditLogs = new AuditLogQueryService(db, Actor);
         Auth = new AuthService(db, Passwords, Tokens, Actor, Audit, Clock);
         Users = new UserService(db, Passwords, Actor, Audit, Clock);
         Machines = new MachineService(db, Actor, Audit, Clock);
@@ -110,6 +111,7 @@ internal sealed class ModuleFixture : IAsyncDisposable
     public PasswordService Passwords { get; }
     public TokenService Tokens { get; }
     public AuditWriter Audit { get; }
+    public AuditLogQueryService AuditLogs { get; }
     public AuthService Auth { get; }
     public UserService Users { get; }
     public MachineService Machines { get; }

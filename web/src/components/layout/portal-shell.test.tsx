@@ -26,10 +26,12 @@ describe("PortalShell authorization", () => {
     render(<PortalShell><p>Protected content</p></PortalShell>);
     expect(screen.getByText("Reports")).toBeInTheDocument();
     expect(screen.queryByText("Employees")).not.toBeInTheDocument();
+    expect(screen.queryByText("Audit Logs")).not.toBeInTheDocument();
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();
   });
   it("logs out through the session boundary", async () => {
     render(<PortalShell><p>Protected content</p></PortalShell>);
+    expect(screen.getByText("Audit Logs")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Log out" }));
     await waitFor(() => expect(logout).toHaveBeenCalledOnce());
     expect(replace).toHaveBeenCalledWith("/login");

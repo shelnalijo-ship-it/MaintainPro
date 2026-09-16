@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 using System.Security.Cryptography;
 using System.Text;
 using MaintainPro.Application.Abstractions;
+using MaintainPro.Application.Audit;
+using MaintainPro.Application.Common;
 using MaintainPro.Application.Identity;
 using MaintainPro.Application.Machines;
 using MaintainPro.Application.Users;
@@ -242,6 +244,40 @@ public sealed class ApiIntegrationTests
         Assert.DoesNotContain("InvalidOperationException", json);
         Assert.DoesNotContain("stack", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("connection", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Audit_log_api_is_read_only_and_allows_only_managers_and_administrators()
+    {
+        await using var fixture = await ModuleFixture.CreateAsync();
+        var administrator = await fixture.AsAdminAsync();
+        fixture.Audit.Record("Machine.Updated", "Machine", Guid.NewGuid(),
+            oldValues: new { Status = "Standby" }, newValues: new { Status = "Operational" });
+        await fixture.Db.SaveChangesAsync();
+        var manager = await fixture.SeedUserAsync("MANAGER");
+        var supervisor = await fixture.SeedUserAsync("SUPERVISOR");
+        using var factory = new IsolatedApiFactory(fixture);
+        using var client = factory.CreateClient();
+
+        foreach (var allowed in new[] { manager, administrator })
+        {
+            await SignInAsync(client, allowed.Email, fixture.Password);
+            var response = await client.GetAsync("/api/v1/audit-logs?action=Machine.Updated&page=1&pageSize=20");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var page = (await response.Content.ReadFromJsonAsync<PagedResult<AuditLogDto>>(ApiJson))!;
+            Assert.Contains(page.Items, item => item.Action == "Machine.Updated" && item.User is not null);
+            var json = await response.Content.ReadAsStringAsync();
+            Assert.DoesNotContain("passwordHash", json, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("refreshToken", json, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("accessToken", json, StringComparison.OrdinalIgnoreCase);
+        }
+
+        await SignInAsync(client, supervisor.Email, fixture.Password);
+        await AssertProblemAsync(await client.GetAsync("/api/v1/audit-logs"), HttpStatusCode.Forbidden);
+
+        await SignInAsync(client, administrator.Email, fixture.Password);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed,
+            (await client.PostAsJsonAsync("/api/v1/audit-logs", new { })).StatusCode);
     }
 
     private static async Task SignInAsync(HttpClient client, string email, string password)

@@ -29,6 +29,7 @@ public static class Policies
     public const string ViewTechnicianDashboard = nameof(ViewTechnicianDashboard);
     public const string ViewReports = nameof(ViewReports);
     public const string ViewMachineHistoryReports = nameof(ViewMachineHistoryReports);
+    public const string ViewAuditLogs = nameof(ViewAuditLogs);
 
     public static void AddPolicies(IServiceCollection services)
     {
@@ -68,6 +69,8 @@ public static class Policies
                 policy => policy.RequireRole(RoleNames.Supervisor, RoleNames.Manager, RoleNames.Admin));
             options.AddPolicy(ViewMachineHistoryReports,
                 policy => policy.RequireRole(RoleNames.All.ToArray()));
+            options.AddPolicy(ViewAuditLogs,
+                policy => policy.RequireRole(RoleNames.Manager, RoleNames.Admin));
         });
     }
 }

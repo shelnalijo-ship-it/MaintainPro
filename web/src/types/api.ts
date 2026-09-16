@@ -50,6 +50,28 @@ export interface UserLookup {
   lastName: string;
 }
 
+export interface AuditLogUserSummary {
+  id: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface AuditLog {
+  id: string;
+  createdAt: string;
+  userId?: string | null;
+  user?: AuditLogUserSummary | null;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  oldValuesJson?: string | null;
+  newValuesJson?: string | null;
+  ipAddress?: string | null;
+  deviceInfo?: string | null;
+}
+
 export interface AuthResponse {
   accessTokenExpiresAt: string;
   user: User;

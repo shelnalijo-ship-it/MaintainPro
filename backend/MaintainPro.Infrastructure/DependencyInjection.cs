@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuditWriter, AuditWriter>();
+        services.AddScoped<AuditLogQueryService>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();
         services.AddScoped<MachineService>();

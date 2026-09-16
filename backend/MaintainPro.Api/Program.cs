@@ -118,6 +118,7 @@ app.MapBreakdownEndpoints();
 app.MapCalibrationEndpoints();
 app.MapExternalServiceEndpoints();
 app.MapReportingEndpoints();
+app.MapAuditLogEndpoints();
 
 app.Run();
 

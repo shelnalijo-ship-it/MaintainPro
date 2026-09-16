@@ -41,7 +41,6 @@ Tests cover login and validation, protected navigation and logout, token refresh
 
 ## Current API limitations
 
-- The backend has no audit-log query endpoint, so the audit page explains that audit records cannot yet be displayed.
 - Machine documents are exposed per machine, so the document library requires a machine selection before loading records.
 
 Neither limitation is hidden or replaced with sample production data.

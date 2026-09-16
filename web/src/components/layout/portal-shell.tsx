@@ -21,7 +21,7 @@ const nav = [
   { href: "/documents", label: "Documents", icon: FileStack },
   { href: "/reports", label: "Reports", icon: FileBarChart, roles: ["SUPERVISOR", "MANAGER", "ADMIN"] as Role[] },
   { href: "/employees", label: "Employees", icon: Users, roles: ["ADMIN"] as Role[] },
-  { href: "/audit-logs", label: "Audit Logs", icon: FileClock, roles: ["ADMIN"] as Role[] },
+  { href: "/audit-logs", label: "Audit Logs", icon: FileClock, roles: ["MANAGER", "ADMIN"] as Role[] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["MANAGER", "ADMIN"] as Role[] },
 ];
 
